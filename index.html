@@ -1,0 +1,3641 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Union Camp Laundry System</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --primary: #1a3a5c; --primary-light: #2a5a8c;
+    --accent: #e8a020; --accent-light: #f5c060;
+    --bg: #f4f6f9; --surface: #ffffff; --surface2: #eef1f6;
+    --border: #d0d8e4; --text: #1a2535; --text-muted: #6b7a90;
+    --success: #2e7d52; --danger: #c0392b; --sidebar-w: 240px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; display: flex; }
+
+  /* SIDEBAR */
+  #sidebar { width: var(--sidebar-w); min-height: 100vh; background: var(--primary); display: flex; flex-direction: column; position: fixed; left: 0; top: 0; z-index: 100; box-shadow: 4px 0 20px rgba(0,0,0,.15); }
+  .sidebar-logo { padding: 22px 20px 18px; border-bottom: 1px solid rgba(255,255,255,.1); }
+  .sidebar-logo h1 { color: #fff; font-size: 15px; font-weight: 700; line-height: 1.3; }
+  .sidebar-logo span { color: var(--accent); font-size: 11px; text-transform: uppercase; letter-spacing: 1.5px; }
+  .sidebar-user { padding: 14px 20px; border-bottom: 1px solid rgba(255,255,255,.1); display: flex; align-items: center; gap: 10px; }
+  .avatar { width: 34px; height: 34px; border-radius: 50%; background: var(--accent); display: grid; place-items: center; font-weight: 700; color: var(--primary); font-size: 13px; flex-shrink: 0; }
+  .sidebar-user-info small { display: block; color: rgba(255,255,255,.5); font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+  .sidebar-user-info strong { color: #fff; font-size: 13px; }
+  nav { flex: 1; padding: 12px 0; overflow-y: auto; }
+  .nav-section { padding: 8px 20px 4px; color: rgba(255,255,255,.35); font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; }
+  .nav-item { display: flex; align-items: center; gap: 10px; padding: 10px 20px; color: rgba(255,255,255,.7); cursor: pointer; transition: all .2s; font-size: 14px; border-left: 3px solid transparent; }
+  .nav-item:hover { background: rgba(255,255,255,.07); color: #fff; }
+  .nav-item.active { background: rgba(255,255,255,.12); color: #fff; border-left-color: var(--accent); font-weight: 600; }
+  .nav-item .icon { font-size: 16px; width: 20px; text-align: center; }
+  .sidebar-bottom { padding: 16px 20px; border-top: 1px solid rgba(255,255,255,.1); }
+  .logout-btn { width: 100%; padding: 8px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.15); border-radius: 6px; color: rgba(255,255,255,.7); cursor: pointer; font-size: 13px; font-family: inherit; transition: all .2s; }
+  .logout-btn:hover { background: rgba(255,255,255,.15); color: #fff; }
+
+  /* MAIN */
+  #main { margin-left: var(--sidebar-w); flex: 1; display: flex; flex-direction: column; }
+  .topbar { background: var(--surface); border-bottom: 1px solid var(--border); padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 50; }
+  .topbar h2 { font-size: 18px; font-weight: 700; color: var(--primary); }
+  .topbar-meta { color: var(--text-muted); font-size: 13px; display: flex; align-items: center; gap: 16px; }
+  .topbar-date { font-family: 'DM Mono', monospace; font-size: 12px; background: var(--surface2); padding: 4px 10px; border-radius: 4px; }
+  .content { padding: 28px; flex: 1; }
+
+  /* PANELS */
+  .panel { background: var(--surface); border-radius: 10px; border: 1px solid var(--border); box-shadow: 0 2px 8px rgba(0,0,0,.04); }
+  .panel-header { padding: 18px 22px; border-bottom: 1px solid var(--border); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 8px; }
+  .panel-header h3 { font-size: 15px; font-weight: 700; color: var(--primary); }
+  .panel-body { padding: 22px; }
+  .stat-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 16px; margin-bottom: 24px; }
+  .stat-card { background: var(--surface); border: 1px solid var(--border); border-radius: 10px; padding: 18px 20px; }
+  .stat-card .label { font-size: 11px; text-transform: uppercase; letter-spacing: 1px; color: var(--text-muted); margin-bottom: 6px; }
+  .stat-card .value { font-size: 28px; font-weight: 700; color: var(--primary); font-family: 'DM Mono', monospace; }
+  .stat-card .sub { font-size: 12px; color: var(--text-muted); margin-top: 4px; }
+  .stat-card.accent-card { background: var(--primary); border-color: var(--primary); }
+  .stat-card.accent-card .label, .stat-card.accent-card .sub { color: rgba(255,255,255,.6); }
+  .stat-card.accent-card .value { color: var(--accent); }
+
+  /* FORMS */
+  .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+  .form-grid.cols3 { grid-template-columns: 1fr 1fr 1fr; }
+  .form-group { display: flex; flex-direction: column; gap: 6px; }
+  .form-group label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .8px; }
+  .form-group input, .form-group select { padding: 9px 12px; border: 1.5px solid var(--border); border-radius: 7px; font-size: 14px; font-family: inherit; color: var(--text); background: var(--bg); transition: border-color .2s, box-shadow .2s; outline: none; }
+  .form-group input:focus, .form-group select:focus { border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(42,90,140,.1); background: #fff; }
+  .autocomplete-wrapper { position: relative; }
+  .autocomplete-list { position: absolute; top: 100%; left: 0; right: 0; background: #fff; border: 1.5px solid var(--border); border-top: none; border-radius: 0 0 7px 7px; max-height: 180px; overflow-y: auto; z-index: 200; box-shadow: 0 8px 20px rgba(0,0,0,.1); }
+  .autocomplete-item { padding: 9px 12px; cursor: pointer; font-size: 14px; transition: background .15s; }
+  .autocomplete-item:hover { background: var(--surface2); }
+
+  /* ITEMS TABLE */
+  .items-table { width: 100%; border-collapse: collapse; }
+  .items-table th { background: var(--primary); color: #fff; padding: 10px 14px; text-align: left; font-size: 12px; letter-spacing: .5px; font-weight: 600; }
+  .items-table td { padding: 8px 14px; border-bottom: 1px solid var(--border); font-size: 14px; vertical-align: middle; }
+  .items-table tr:hover td { background: var(--surface2); }
+  .items-table .qty-input { width: 80px; padding: 6px 10px; border: 1.5px solid var(--border); border-radius: 6px; font-size: 14px; text-align: center; font-family: inherit; }
+  .items-table .qty-input:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(232,160,32,.15); }
+  .items-table .row-total { font-family: 'DM Mono', monospace; font-weight: 600; color: var(--primary); text-align: center; }
+  .total-row td { background: var(--primary) !important; color: #fff; font-weight: 700; font-size: 14px; }
+  .total-row .grand { font-family: 'DM Mono', monospace; font-size: 18px; color: var(--accent); text-align: center; }
+
+  /* BUTTONS */
+  .btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 18px; border-radius: 7px; font-size: 14px; font-weight: 600; cursor: pointer; border: none; font-family: inherit; transition: all .2s; white-space: nowrap; }
+  .btn-primary { background: var(--primary); color: #fff; }
+  .btn-primary:hover { background: var(--primary-light); }
+  .btn-accent { background: var(--accent); color: var(--primary); }
+  .btn-accent:hover { background: var(--accent-light); }
+  .btn-outline { background: transparent; border: 1.5px solid var(--border); color: var(--text); }
+  .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+  .btn-danger { background: var(--danger); color: #fff; }
+  .btn-danger:hover { opacity: .85; }
+  .btn-success { background: var(--success); color: #fff; }
+  .btn-sm { padding: 5px 12px; font-size: 12px; }
+  .btn-group { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 20px; }
+
+  /* REPORT TABLE */
+  .report-table-wrap { overflow-x: auto; }
+  .report-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  .report-table thead tr { background: var(--primary); color: #fff; }
+  .report-table th { padding: 10px 12px; text-align: left; font-weight: 600; font-size: 11px; letter-spacing: .5px; white-space: nowrap; }
+  .report-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+  .report-table tbody tr:nth-child(even) td { background: var(--surface2); }
+  .report-table tbody tr:hover td { background: #e4eaf5; }
+  .report-table tfoot td { background: var(--primary); color: #fff; font-weight: 700; padding: 10px 12px; font-family: 'DM Mono', monospace; }
+  .badge-loc { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 700; }
+  .badge-AQ-M1 { background: #dbeafe; color: #1e40af; }
+  .badge-AQ-M2 { background: #dcfce7; color: #166534; }
+  .badge-AQ-F  { background: #fce7f3; color: #9d174d; }
+  .badge-SR-M  { background: #fef9c3; color: #854d0e; }
+  .badge-SR-F  { background: #f3e8ff; color: #6b21a8; }
+
+  /* GRIDS */
+  .item-grid { display: flex; flex-wrap: wrap; gap: 14px; }
+  .item-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; display: flex; flex-direction: column; gap: 12px; width: 200px; min-width: 200px; box-sizing: border-box; }
+  .item-card .info { display: flex; flex-direction: column; gap: 3px; }
+  .item-card .info .name { font-size: 14px; font-weight: 700; color: var(--text); word-break: break-word; line-height: 1.3; }
+  .item-card .info .sub { font-size: 12px; color: var(--text-muted); font-weight: 500; }
+  .item-card .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+  /* SETTINGS TABS */
+  .settings-tabs { display: flex; gap: 0; margin-bottom: 24px; border-bottom: 2px solid var(--border); }
+  .stab { padding: 10px 20px; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-muted); border-bottom: 3px solid transparent; margin-bottom: -2px; transition: all .18s; }
+  .stab:hover { color: var(--primary); }
+  .stab.active { color: var(--primary); border-bottom-color: var(--accent); }
+  .stab-panel { display: none; }
+  .stab-panel.active { display: block; }
+
+  /* IMPORT/EXPORT */
+  .ie-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+  .ie-card { background: var(--surface2); border: 1px solid var(--border); border-radius: 10px; padding: 22px; }
+  .ie-card h4 { font-size: 15px; font-weight: 700; color: var(--primary); margin-bottom: 6px; }
+  .ie-card p { font-size: 13px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.5; }
+  .drop-zone { border: 2px dashed var(--border); border-radius: 8px; padding: 24px 16px; text-align: center; cursor: pointer; transition: all .2s; margin-bottom: 12px; }
+  .drop-zone:hover { border-color: var(--primary-light); background: #f0f5ff; }
+  .drop-zone .dz-icon { font-size: 26px; margin-bottom: 6px; }
+  .drop-zone p { font-size: 13px; color: var(--text-muted); }
+  input[type=file] { display: none; }
+
+  /* MODAL */
+  .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 500; place-items: center; }
+  .modal-overlay.open { display: grid; }
+  .modal { background: #fff; border-radius: 12px; padding: 28px; width: 420px; max-width: 95vw; }
+  .modal h3 { font-size: 17px; font-weight: 700; margin-bottom: 18px; color: var(--primary); }
+  .modal .form-group { margin-bottom: 14px; }
+
+  /* LOGIN */
+  #login-screen { display: none; position: fixed; inset: 0; background: linear-gradient(145deg, #1a3a5c 0%, #0d2540 60%, #163050 100%); z-index: 1000; place-items: center; }
+  #login-screen.show { display: grid; }
+  .login-box { background: #fff; border-radius: 20px; padding: 36px 32px 28px; width: 440px; max-width: 95vw; box-shadow: 0 24px 60px rgba(0,0,0,.35); }
+  .login-logo-wrap { display: flex; flex-direction: column; align-items: center; margin-bottom: 6px; }
+  .login-logo-icon { width: 64px; height: 64px; border-radius: 18px; background: linear-gradient(135deg, #1a3a5c, #2a7ab8); display: grid; place-items: center; font-size: 30px; box-shadow: 0 8px 20px rgba(26,58,92,.35); margin-bottom: 12px; }
+  .login-logo-wrap h2 { font-size: 22px; font-weight: 800; color: var(--text); margin-bottom: 2px; }
+  .login-logo-wrap p { font-size: 13px; color: var(--text-muted); margin-bottom: 22px; }
+  .account-cards-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+  .account-card { border: 2px solid var(--border); border-radius: 12px; padding: 14px 12px; cursor: pointer; text-align: center; transition: all .18s; background: #fff; }
+  .account-card:hover { border-color: var(--primary-light); box-shadow: 0 4px 14px rgba(26,58,92,.12); transform: translateY(-1px); }
+  .account-card.selected { border-color: var(--primary); background: #f0f5ff; box-shadow: 0 4px 16px rgba(26,58,92,.18); }
+  .account-card .ac-avatar { width: 44px; height: 44px; border-radius: 50%; margin: 0 auto 8px; display: grid; place-items: center; font-size: 15px; font-weight: 800; color: #fff; }
+  .account-card .ac-name { font-size: 13px; font-weight: 700; color: var(--text); line-height: 1.3; margin-bottom: 4px; }
+  .account-card .ac-role { font-size: 11px; color: var(--text-muted); display: flex; align-items: center; justify-content: center; gap: 3px; }
+  .login-pass-row { margin-bottom: 14px; }
+  .login-pass-row label { font-size: 12px; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .8px; display: block; margin-bottom: 6px; }
+  .login-pass-row input { width: 100%; padding: 10px 14px; border: 1.5px solid var(--border); border-radius: 8px; font-size: 14px; font-family: inherit; outline: none; transition: border-color .2s; }
+  .login-pass-row input:focus { border-color: var(--primary-light); box-shadow: 0 0 0 3px rgba(42,90,140,.1); }
+
+  /* ALERTS */
+  .alert { padding: 10px 14px; border-radius: 7px; font-size: 13px; margin-bottom: 14px; }
+  .alert-success { background: #d1fae5; color: #065f46; border: 1px solid #6ee7b7; }
+  .alert-error   { background: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+  .alert-info    { background: #dbeafe; color: #1e3a8a; border: 1px solid #93c5fd; }
+  .page { display: none; }
+  .page.active { display: block; }
+  .section-divider { margin: 20px 0; border: none; border-top: 1px solid var(--border); }
+  ::-webkit-scrollbar { width: 6px; height: 6px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: #c0ccd8; border-radius: 4px; }
+
+  /* UNION STAFF REPORT MODAL */
+  #union-report-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.52); z-index: 700; overflow-y: auto; padding: 30px 20px; }
+  #union-report-modal.open { display: flex; align-items: flex-start; justify-content: center; }
+  #union-report-inner { background: #fff; border-radius: 14px; padding: 28px 28px 22px; width: 680px; max-width: 97vw; box-shadow: 0 20px 60px rgba(0,0,0,.28); margin-top: 20px; }
+  #union-report-inner h3 { font-size: 17px; font-weight: 800; color: var(--primary); margin-bottom: 18px; display: flex; align-items: center; gap: 8px; }
+  .report-type-btns { display: flex; gap: 12px; margin-bottom: 20px; }
+  .rtype-btn { flex: 1; padding: 14px 10px; border-radius: 10px; border: 2px solid var(--border); background: var(--bg); cursor: pointer; text-align: center; font-size: 14px; font-weight: 700; color: var(--text-muted); font-family: inherit; transition: all .18s; }
+  .rtype-btn:hover { border-color: var(--primary-light); color: var(--primary); }
+  .rtype-btn.active { border-color: var(--primary); background: var(--primary); color: #fff; }
+  #union-report-content { margin-top: 4px; }
+
+  /* CAMP FILTER BAR */
+  .camp-filter-bar { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 20px; padding: 14px 18px; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; box-shadow: 0 2px 6px rgba(0,0,0,.04); }
+  .camp-filter-bar label { font-size: 11px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; margin-right: 4px; white-space: nowrap; }
+  .camp-filter-btn { padding: 6px 16px; border-radius: 20px; border: 1.5px solid var(--border); background: #fff; color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all .18s; }
+  .camp-filter-btn:hover { border-color: var(--primary); color: var(--primary); }
+  .camp-filter-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+  .camp-filter-btn.all-btn { background: var(--accent); border-color: var(--accent); color: var(--primary); }
+  .camp-filter-btn.all-btn:hover { background: var(--accent-light); }
+
+  /* MONTH PICKER BUTTONS */
+  .month-opt-btn { padding: 7px 4px; border: 1.5px solid var(--border); border-radius: 6px; background: #fff; color: var(--text); font-size: 13px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all .15s; text-align: center; }
+  .month-opt-btn:hover { border-color: var(--primary-light); background: #f0f5ff; color: var(--primary); }
+  .month-opt-btn.active { background: var(--primary); border-color: var(--primary); color: #fff; }
+
+  /* LOCK BADGE on restricted rows */
+  .lock-row td { opacity: .55; }
+  .lock-badge { font-size: 10px; background: #fee2e2; color: #991b1b; padding: 2px 6px; border-radius: 4px; margin-left: 4px; font-weight: 700; }
+
+  /* WRONG CAMP WARNING MODAL */
+  #wrong-camp-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 960; place-items: center; }
+  #wrong-camp-modal.open { display: grid; }
+  #wrong-camp-modal-inner { background: #fff; border-radius: 14px; padding: 28px 28px 22px; width: 460px; max-width: 95vw; box-shadow: 0 24px 60px rgba(0,0,0,.3); }
+  .wc-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .wc-icon { width: 48px; height: 48px; border-radius: 50%; background: #fff3cd; display: grid; place-items: center; font-size: 24px; flex-shrink: 0; border: 2px solid #ffc107; }
+  .wc-info-box { background: #fffbea; border: 1px solid #ffe082; border-radius: 10px; padding: 14px 16px; margin-bottom: 18px; font-size: 13px; line-height: 1.7; }
+  .wc-info-box strong { color: var(--primary); }
+  .wc-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+
+  /* SWITCH USER DROPDOWN */
+  .switch-user-wrap { position: relative; }
+  .switch-user-btn { display: inline-flex; align-items: center; gap: 6px; padding: 5px 12px; border-radius: 7px; background: var(--primary); color: #fff; border: 1.5px solid rgba(255,255,255,.25); font-size: 12px; font-weight: 600; cursor: pointer; font-family: inherit; transition: all .2s; white-space: nowrap; }
+  .switch-user-btn:hover { background: var(--primary-light); }
+  .switch-user-dropdown { position: absolute; top: calc(100% + 8px); right: 0; background: #fff; border: 1.5px solid var(--border); border-radius: 10px; box-shadow: 0 12px 32px rgba(0,0,0,.14); min-width: 210px; z-index: 600; display: none; overflow: hidden; }
+  .switch-user-dropdown.open { display: block; }
+  .switch-user-dropdown-header { padding: 10px 14px 6px; font-size: 10px; font-weight: 700; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; border-bottom: 1px solid var(--border); }
+  .switch-user-item { display: flex; align-items: center; gap: 10px; padding: 9px 14px; cursor: pointer; transition: background .15s; font-size: 13px; color: var(--text); }
+  .switch-user-item:hover { background: var(--surface2); }
+  .switch-user-item .su-avatar { width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center; font-size: 11px; font-weight: 800; color: #fff; flex-shrink: 0; }
+  .switch-user-item .su-info small { display: block; font-size: 10px; color: var(--text-muted); }
+  .switch-user-item .su-info strong { font-size: 13px; font-weight: 700; }
+  .switch-user-item.current-user { background: #f0f5ff; }
+
+  /* ── THERMAL RECEIPT PRINT (80mm) ────────────── */
+  #thermal-receipt { display: none; }
+
+  /* Thermal preview modal */
+  #thermal-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 900; overflow-y: auto; padding: 30px 20px; }
+  #thermal-modal.open { display: flex; align-items: flex-start; justify-content: center; }
+  #thermal-modal-inner { background: #f5f5f0; border-radius: 12px; padding: 24px 24px 20px; width: 380px; max-width: 95vw; box-shadow: 0 20px 60px rgba(0,0,0,.3); margin-top: 20px; }
+  #thermal-modal-inner h3 { font-size: 15px; font-weight: 700; color: var(--primary); margin-bottom: 14px; display: flex; align-items: center; gap: 8px; }
+  .thermal-action-bar { display: flex; gap: 10px; justify-content: flex-end; margin-top: 16px; }
+
+  /* DUPLICATE ENTRY WARNING MODAL */
+  #duplicate-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.55); z-index: 950; place-items: center; }
+  #duplicate-modal.open { display: grid; }
+  #duplicate-modal-inner { background: #fff; border-radius: 14px; padding: 28px 28px 22px; width: 480px; max-width: 95vw; box-shadow: 0 24px 60px rgba(0,0,0,.3); }
+  .dup-header { display: flex; align-items: center; gap: 12px; margin-bottom: 16px; }
+  .dup-icon { width: 48px; height: 48px; border-radius: 50%; background: #fee2e2; display: grid; place-items: center; font-size: 22px; flex-shrink: 0; }
+  .dup-header h3 { font-size: 17px; font-weight: 800; color: var(--danger); margin: 0; }
+  .dup-header p  { font-size: 13px; color: var(--text-muted); margin: 2px 0 0; }
+  .dup-info-box { background: #f8f9fb; border: 1px solid var(--border); border-radius: 10px; padding: 16px 18px; margin-bottom: 20px; }
+  .dup-info-row { display: flex; gap: 8px; align-items: baseline; font-size: 13px; margin-bottom: 6px; }
+  .dup-info-row:last-child { margin-bottom: 0; }
+  .dup-info-row .lbl { font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: .7px; color: var(--text-muted); min-width: 110px; }
+  .dup-info-row .val { font-weight: 600; color: var(--text); font-family: 'DM Mono', monospace; }
+  .dup-items-list { margin-top: 8px; padding-top: 8px; border-top: 1px solid var(--border); display: flex; flex-wrap: wrap; gap: 6px; }
+  .dup-item-badge { background: var(--primary); color: #fff; border-radius: 6px; padding: 3px 10px; font-size: 12px; font-family: 'DM Mono', monospace; font-weight: 600; }
+  .dup-actions { display: flex; gap: 10px; justify-content: flex-end; flex-wrap: wrap; }
+
+  /* Screen preview of the thermal receipt */
+  .thermal-preview-wrap {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 12px;
+    color: #111;
+    background: #fff;
+    width: 300px;
+    margin: 0 auto;
+    padding: 16px 14px;
+    border: 1px dashed #aaa;
+    border-radius: 4px;
+    line-height: 1.6;
+    word-break: break-word;
+  }
+  .thermal-preview-wrap .t-center { text-align: center; }
+  .thermal-preview-wrap .t-big    { font-size: 15px; font-weight: 900; letter-spacing: 1px; }
+  .thermal-preview-wrap .t-div    { border-top: 1px dashed #888; margin: 6px 0; }
+  .thermal-preview-wrap .t-item   { display: flex; justify-content: space-between; }
+  .thermal-preview-wrap .t-total  { display: flex; justify-content: space-between; font-weight: 900; font-size: 14px; border-top: 2px solid #000; margin-top: 5px; padding-top: 5px; }
+
+  /* ONLINE STATUS */
+  .online-dot { display:inline-block; width:9px; height:9px; border-radius:50%; background:#2e7d52; margin-right:5px; box-shadow:0 0 0 2px rgba(46,125,82,.25); animation:pulse-green 2s infinite; }
+  .offline-dot { display:inline-block; width:9px; height:9px; border-radius:50%; background:#adb5bd; margin-right:5px; }
+  @keyframes pulse-green { 0%,100%{box-shadow:0 0 0 2px rgba(46,125,82,.25)} 50%{box-shadow:0 0 0 5px rgba(46,125,82,.1)} }
+  .staff-online-grid { display:flex; flex-wrap:wrap; gap:10px; margin-bottom:24px; }
+  .staff-status-card { background:var(--surface); border:1.5px solid var(--border); border-radius:10px; padding:12px 16px; display:flex; align-items:center; gap:10px; min-width:200px; }
+  .staff-status-card.is-online { border-color:#6ee7b7; background:#f0fdf4; }
+  .staff-status-card .ss-name { font-size:13px; font-weight:700; color:var(--text); }
+  .staff-status-card .ss-time { font-size:11px; color:var(--text-muted); margin-top:1px; font-family:'DM Mono',monospace; }
+  .staff-status-card .ss-loc { font-size:11px; font-weight:600; color:var(--primary); }
+  @media print {
+    body.printing-statement > *                         { display: none !important; }
+    body.printing-statement #print-preview-modal        { display: block !important; position: static !important; background: none !important; }
+    body.printing-statement #print-modal-inner          { box-shadow: none !important; max-width: 100% !important; border: none !important; }
+    body.printing-statement .no-print                   { display: none !important; }
+  }
+  /* PRINT PREVIEW MODAL */
+  .print-opt-check { display:inline-flex;align-items:center;gap:6px;background:var(--surface);border:1px solid var(--border);border-radius:6px;padding:6px 12px;font-size:13px;cursor:pointer;user-select:none; }
+  .print-opt-check input { accent-color:var(--primary); width:15px;height:15px; }
+  #print-preview-modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.52); z-index: 800; overflow-y: auto; padding: 30px 20px; }
+  #print-preview-modal.open { display: flex; align-items: flex-start; justify-content: center; }
+  #print-modal-inner { background: #fff; max-width: 900px; width: 100%; margin: 0 auto; border-radius: 12px; padding: 32px 36px; box-shadow: 0 20px 60px rgba(0,0,0,.25); margin-top: 20px; margin-bottom: 20px; }
+  .print-header-bar { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; padding-bottom: 16px; border-bottom: 2px solid var(--primary); }
+  .print-logo { font-size: 22px; font-weight: 800; color: var(--primary); }
+  .print-logo span { color: var(--accent); }
+  .print-meta { font-size: 12px; color: var(--text-muted); text-align: right; line-height: 1.7; }
+  .print-info-row { display: flex; gap: 32px; margin-bottom: 18px; font-size: 13px; }
+  .print-info-row .pi { }
+  .print-info-row .pi strong { display: block; font-size: 11px; text-transform: uppercase; letter-spacing: .8px; color: var(--text-muted); margin-bottom: 2px; }
+  .print-table { width: 100%; border-collapse: collapse; font-size: 12px; margin-top: 8px; }
+  .print-table th { background: var(--primary); color: #fff; padding: 8px 10px; text-align: left; font-size: 11px; font-weight: 700; }
+  .print-table td { padding: 7px 10px; border-bottom: 1px solid #e5e5e5; }
+  .print-table tbody tr:nth-child(even) td { background: #f7f9fc; }
+  .print-table tfoot td { background: var(--primary); color: #fff; font-weight: 700; padding: 8px 10px; font-family: 'DM Mono', monospace; }
+  .print-actions { display: flex; gap: 10px; justify-content: flex-end; margin-bottom: 20px; }
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen" class="show">
+  <div class="login-box">
+    <div class="login-logo-wrap">
+      <div class="login-logo-icon">🧺</div>
+      <h2>Union Laundry</h2>
+      <p>Management System — Please Select Your Account</p>
+    </div>
+    <div id="login-error" class="alert alert-error" style="display:none;margin-bottom:12px"></div>
+    <div class="account-cards-grid">
+      <div class="account-card" onclick="selectAccount('admin-suhail','Admin Suhail','#c0392b')">
+        <div class="ac-avatar" style="background:#c0392b">AS</div>
+        <div class="ac-name">Admin Suhail</div>
+        <div class="ac-role">🏷️ Admin</div>
+      </div>
+      <div class="account-card" onclick="selectAccount('mr.prosper','Alquoz Male Camp 1','#1a6fba')">
+        <div class="ac-avatar" style="background:#1a6fba">AM</div>
+        <div class="ac-name">Alquoz Male Camp 1</div>
+        <div class="ac-role">🪪 Staff</div>
+      </div>
+      <div class="account-card" onclick="selectAccount('mr.mokate','Alquoz Male Camp 2','#2e7d52')">
+        <div class="ac-avatar" style="background:#2e7d52">AM</div>
+        <div class="ac-name">Alquoz Male Camp 2</div>
+        <div class="ac-role">🪪 Staff</div>
+      </div>
+      <div class="account-card" onclick="selectAccount('aq.female','Alquoz Female Camp','#9b2c7e')">
+        <div class="ac-avatar" style="background:#9b2c7e">AF</div>
+        <div class="ac-name">Alquoz Female Camp</div>
+        <div class="ac-role">🪪 Staff</div>
+      </div>
+      <div class="account-card" onclick="selectAccount('mr.tofik','Sonapur Male Camp','#1a8a6e')">
+        <div class="ac-avatar" style="background:#1a8a6e">SM</div>
+        <div class="ac-name">Sonapur Male Camp</div>
+        <div class="ac-role">🪪 Staff</div>
+      </div>
+      <div class="account-card" onclick="selectAccount('sr.female','Sonapur Female Camp','#b5451b')">
+        <div class="ac-avatar" style="background:#b5451b">SF</div>
+        <div class="ac-name">Sonapur Female Camp</div>
+        <div class="ac-role">🪪 Staff</div>
+      </div>
+    </div>
+    <div class="login-pass-row">
+      <label>Password for — <span id="selected-account-label" style="font-weight:700">select an account above</span> —</label>
+      <input type="password" id="login-pass" placeholder="Enter password..." onkeydown="if(event.key==='Enter')doLogin()" />
+    </div>
+    <button class="btn btn-primary" style="width:100%;justify-content:center" onclick="doLogin()">⇢ Login</button>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<div id="sidebar">
+  <div class="sidebar-logo">
+    <h1>Union Camp Laundry</h1>
+    <span>Berkeley Staff System</span>
+  </div>
+  <div class="sidebar-user">
+    <div class="avatar" id="user-avatar">A</div>
+    <div class="sidebar-user-info">
+      <small>Logged in as</small>
+      <strong id="user-display-name">Admin</strong>
+    </div>
+  </div>
+  <nav>
+    <div class="nav-section">Operations</div>
+    <div class="nav-item active" onclick="navigate('dashboard')" id="nav-dashboard"><span class="icon">📊</span> Dashboard</div>
+    <div class="nav-item" onclick="navigate('daily-entry')" id="nav-daily-entry"><span class="icon">📝</span> Union Daily Entry</div>
+    <div class="nav-section">Management</div>
+    <div class="nav-item" onclick="navigate('report')" id="nav-report"><span class="icon">📋</span> Report / Statement of Pieces</div>
+    <div class="nav-item" onclick="navigate('union-staff')" id="nav-union-staff"><span class="icon">👷</span> Union Staff</div>
+    <div class="nav-item admin-only" onclick="navigate('uniforms')" id="nav-uniforms"><span class="icon">👕</span> Uniforms Management</div>
+    <div class="nav-item admin-only" onclick="navigate('settings')" id="nav-settings"><span class="icon">⚙️</span> Settings</div>
+  </nav>
+  <div class="sidebar-bottom">
+    <button class="logout-btn" onclick="doLogout()">⇠ Sign Out</button>
+  </div>
+</div>
+
+<!-- MAIN -->
+<div id="main">
+  <div class="topbar">
+    <h2 id="page-title">Dashboard</h2>
+    <div class="topbar-meta">
+      <span id="logged-role-badge" style="font-size:11px;padding:3px 8px;border-radius:4px;background:var(--surface2);font-weight:600;color:var(--primary)">ADMIN</span>
+      <span class="topbar-date" id="current-date"></span>
+      <div class="switch-user-wrap" id="switch-user-wrap" style="display:none">
+        <button class="switch-user-btn" onclick="toggleSwitchDropdown()">⇄ Switch User ▾</button>
+        <div class="switch-user-dropdown" id="switch-user-dropdown">
+          <div class="switch-user-dropdown-header">Switch to Account</div>
+          <div id="switch-user-list"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+  <div class="content">
+
+    <!-- DASHBOARD -->
+    <div class="page active" id="page-dashboard">
+      <div id="edit-entry-alert" class="alert" style="display:none;margin-bottom:16px"></div>
+      <div class="stat-grid" id="stat-grid"></div>
+
+      <!-- Staff Online Status (Admin only) -->
+      <div id="staff-online-section" class="panel" style="margin-bottom:20px;display:none">
+        <div class="panel-header">
+          <h3>🟢 Staff Online Status</h3>
+          <span id="online-count-badge" style="font-size:12px;color:var(--text-muted)"></span>
+        </div>
+        <div class="panel-body">
+          <div class="staff-online-grid" id="staff-online-grid"></div>
+        </div>
+      </div>
+      <!-- Camp Filter Bar -->
+      <div class="camp-filter-bar" id="camp-filter-bar">
+        <label>🏕️ All Camps:</label>
+        <button class="camp-filter-btn all-btn active" onclick="setCampFilter('')" id="cfbtn-all">All Camps</button>
+        <button class="camp-filter-btn" onclick="setCampFilter('AQ-M1')" id="cfbtn-AQ-M1">AQ-M1</button>
+        <button class="camp-filter-btn" onclick="setCampFilter('AQ-M2')" id="cfbtn-AQ-M2">AQ-M2</button>
+        <button class="camp-filter-btn" onclick="setCampFilter('AQ-F')" id="cfbtn-AQ-F">AQ-F</button>
+        <button class="camp-filter-btn" onclick="setCampFilter('SR-M')" id="cfbtn-SR-M">SR-M</button>
+        <button class="camp-filter-btn" onclick="setCampFilter('SR-F')" id="cfbtn-SR-F">SR-F</button>
+        <span id="camp-filter-label" style="margin-left:auto;font-size:12px;color:var(--text-muted)"></span>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><h3>Recent Submissions</h3><button class="btn btn-primary btn-sm" onclick="printDashboard()">🖨️ Print</button></div>
+        <div class="panel-body" style="padding:0">
+          <div class="report-table-wrap">
+            <table class="report-table">
+              <thead><tr><th>Date</th><th>Time</th><th>Union Staff</th><th>Location</th><th>Berkeley Staff</th><th>Total Qty</th><th style="text-align:center">Edit</th></tr></thead>
+              <tbody id="recent-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- DAILY ENTRY -->
+    <div class="page" id="page-daily-entry">
+      <div id="entry-success" class="alert alert-success" style="display:none">✅ Entry saved successfully!</div>
+      <div class="panel" style="margin-bottom:20px">
+        <div class="panel-header"><h3>📍 Location & Staff Details</h3></div>
+        <div class="panel-body">
+          <div class="form-grid cols3">
+            <div class="form-group"><label>Date</label><input type="date" id="entry-date" /></div>
+            <div class="form-group">
+              <label>Camp Location</label>
+              <select id="entry-location" onchange="onLocationChange()">
+                <option value="">-- Select Location --</option>
+                <option>AQ-M1</option><option>AQ-M2</option>
+                <option>AQ-F</option><option>SR-M</option><option>SR-F</option>
+              </select>
+            </div>
+            <div class="form-group">
+              <label>Berkeley Staff (Collector)</label>
+              <input type="text" id="entry-berkeley-staff" readonly style="background:#f0f0f0;cursor:not-allowed" />
+            </div>
+          </div>
+          <hr class="section-divider">
+          <div class="form-group" style="max-width:460px">
+            <label>Union Staff Name</label>
+            <div style="display:flex;align-items:flex-start;gap:10px">
+              <div class="autocomplete-wrapper" style="flex:1">
+                <input type="text" id="entry-union-staff" placeholder="Type or select name…" autocomplete="off" oninput="onUnionStaffInput()" />
+                <div class="autocomplete-list" id="autocomplete-list" style="display:none"></div>
+              </div>
+              <button type="button" class="btn btn-outline btn-sm" onclick="showUnionStaffAccommodation()" title="Check Union Staff Accommodation Location" style="white-space:nowrap;margin-top:1px;border-color:var(--primary-light);color:var(--primary);font-size:12px;padding:8px 12px">🏠 Union Staff Accommodation</button>
+            </div>
+            <div id="union-staff-accom-badge" style="display:none;margin-top:8px;padding:7px 13px;background:#f0f5ff;border:1.5px solid #b8d0f0;border-radius:7px;font-size:13px;color:var(--primary);font-weight:600">
+              📍 <span id="union-staff-accom-text"></span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="panel">
+        <div class="panel-header"><h3>👕 Uniform Items</h3></div>
+        <div class="panel-body" style="padding:0">
+          <table class="items-table">
+            <thead><tr><th>#</th><th>Item Name</th><th style="text-align:center">Quantity</th><th>Row Total</th></tr></thead>
+            <tbody id="items-tbody"></tbody>
+            <tfoot><tr class="total-row">
+              <td colspan="3" style="color:#fff;font-size:14px;padding-left:14px">GRAND TOTAL</td>
+              <td class="grand" id="grand-total">0</td>
+            </tr></tfoot>
+          </table>
+        </div>
+        <div style="padding:16px 22px;border-top:1px solid var(--border)">
+          <div class="btn-group" style="margin-top:0">
+            <button class="btn btn-accent" onclick="saveEntry()">💾 Save Entry</button>
+            <button class="btn btn-primary" onclick="saveAndPrint()">🖨️ Save &amp; Print Receipt</button>
+            <button class="btn btn-outline" onclick="clearEntryForm()">✕ Clear</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- REPORT / STATEMENT OF PIECES DAILY & MONTHLY (merged) -->
+    <div class="page" id="page-report">
+
+      <!-- Tab switcher -->
+      <div class="settings-tabs" style="margin-bottom:24px">
+        <div class="stab active" id="rtab-btn-daily" onclick="switchReportTab('daily',this)">📅 Daily Report</div>
+        <div class="stab" id="rtab-btn-monthly" onclick="switchReportTab('monthly',this)">📆 Monthly Report</div>
+      </div>
+
+      <!-- ── DAILY TAB ── -->
+      <div class="stab-panel active" id="rtab-daily">
+        <div class="panel" style="margin-bottom:20px">
+          <div class="panel-header"><h3>🔍 Filters</h3></div>
+          <div class="panel-body">
+            <div class="form-grid cols3">
+              <div class="form-group"><label>From Date</label><input type="date" id="filter-date-from" oninput="renderReport()" /></div>
+              <div class="form-group"><label>To Date</label><input type="date" id="filter-date-to" oninput="renderReport()" /></div>
+              <div class="form-group" id="filter-location-group">
+                <label>Location</label>
+                <select id="filter-location" onchange="renderReport()">
+                  <option value="">All Locations</option>
+                  <option>AQ-M1</option><option>AQ-M2</option>
+                  <option>AQ-F</option><option>SR-M</option><option>SR-F</option>
+                </select>
+                <div id="filter-location-locked" style="display:none;padding:9px 12px;border:1.5px solid var(--border);border-radius:7px;font-size:14px;background:#f0f5ff;color:var(--primary);font-weight:600"></div>
+              </div>
+            </div>
+            <div class="btn-group" style="margin-top:14px">
+              <button class="btn btn-primary" onclick="renderReport()">🔍 Apply</button>
+              <button class="btn btn-outline" onclick="clearReportFilters()">✕ Clear</button>
+              <button class="btn btn-accent" onclick="exportReportCSV()">📥 Export CSV</button>
+              <button class="btn btn-outline" onclick="exportReportJSON()">📦 Export JSON</button>
+              <button class="btn btn-success" onclick="openPrintOptions()">🖨️ Print Statement</button>
+            </div>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-header">
+            <div>
+              <h3>All Entries — Daily</h3>
+              <div id="report-location-info" style="margin-top:4px"></div>
+            </div>
+            <span id="report-count" style="font-size:13px;color:var(--text-muted)">0 records</span>
+          </div>
+          <div class="panel-body" style="padding:0">
+            <div class="report-table-wrap">
+              <table class="report-table">
+                <thead><tr id="report-thead-row"></tr></thead>
+                <tbody id="report-tbody"></tbody>
+                <tfoot><tr id="report-tfoot-row"></tr></tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ── MONTHLY TAB ── -->
+      <div class="stab-panel" id="rtab-monthly">
+        <div class="panel" style="margin-bottom:20px">
+          <div class="panel-header"><h3>🔍 Filters</h3></div>
+          <div class="panel-body">
+            <!-- Hidden date inputs kept for renderPieces() compatibility -->
+            <input type="hidden" id="pieces-date-from" />
+            <input type="hidden" id="pieces-date-to" />
+            <div style="display:flex;align-items:flex-end;gap:12px;flex-wrap:wrap">
+              <!-- Month picker -->
+              <div class="form-group" style="min-width:160px">
+                <label>Month</label>
+                <div style="position:relative">
+                  <button id="month-picker-btn" class="btn btn-outline" style="width:100%;justify-content:space-between;padding:9px 12px;border:1.5px solid var(--border);border-radius:7px;font-size:14px;font-weight:500;background:var(--bg);color:var(--text)" onclick="toggleMonthDropdown(event)">
+                    <span id="month-picker-label">Select Month</span>
+                    <span style="font-size:11px;color:var(--text-muted)">▼</span>
+                  </button>
+                  <div id="month-dropdown" style="display:none;position:absolute;top:calc(100% + 4px);left:0;width:220px;background:#fff;border:1.5px solid var(--border);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);z-index:300;padding:8px">
+                    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:4px">
+                      <button class="month-opt-btn" onclick="selectMonth(1,'Jan')">Jan</button>
+                      <button class="month-opt-btn" onclick="selectMonth(2,'Feb')">Feb</button>
+                      <button class="month-opt-btn" onclick="selectMonth(3,'Mar')">Mar</button>
+                      <button class="month-opt-btn" onclick="selectMonth(4,'Apr')">Apr</button>
+                      <button class="month-opt-btn" onclick="selectMonth(5,'May')">May</button>
+                      <button class="month-opt-btn" onclick="selectMonth(6,'Jun')">Jun</button>
+                      <button class="month-opt-btn" onclick="selectMonth(7,'Jul')">Jul</button>
+                      <button class="month-opt-btn" onclick="selectMonth(8,'Aug')">Aug</button>
+                      <button class="month-opt-btn" onclick="selectMonth(9,'Sep')">Sep</button>
+                      <button class="month-opt-btn" onclick="selectMonth(10,'Oct')">Oct</button>
+                      <button class="month-opt-btn" onclick="selectMonth(11,'Nov')">Nov</button>
+                      <button class="month-opt-btn" onclick="selectMonth(12,'Dec')">Dec</button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <!-- Year picker -->
+              <div class="form-group" style="min-width:120px">
+                <label>Year</label>
+                <select id="year-picker" onchange="applyMonthYearFilter()" style="padding:9px 12px;border:1.5px solid var(--border);border-radius:7px;font-size:14px;font-family:inherit;color:var(--text);background:var(--bg);outline:none">
+                  <option value="">-- Year --</option>
+                </select>
+              </div>
+              <!-- Union Staff filter -->
+              <div class="form-group" style="flex:1;min-width:200px">
+                <label>Union Staff</label>
+                <div class="autocomplete-wrapper">
+                  <input type="text" id="pieces-staff-search" placeholder="All staff or type name…" autocomplete="off" oninput="onPiecesStaffInput()" />
+                  <div class="autocomplete-list" id="pieces-autocomplete-list" style="display:none"></div>
+                </div>
+              </div>
+            </div>
+            <div class="btn-group" style="margin-top:14px">
+              <button class="btn btn-primary" onclick="renderPieces()">🔍 Apply</button>
+              <button class="btn btn-outline" onclick="clearPiecesFilters()">✕ Clear</button>
+              <button class="btn btn-accent" onclick="exportPiecesCSV()">📥 Export CSV</button>
+              <button class="btn btn-outline" onclick="exportPiecesJSON()">📦 Export JSON</button>
+              <button class="btn btn-success" onclick="openPiecesPrintOptions()">🖨️ Print Statement</button>
+            </div>
+          </div>
+        </div>
+        <div id="pieces-summary-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px"></div>
+        <!-- Camp Filter Bar -->
+        <div class="camp-filter-bar" id="pieces-camp-filter-bar" style="margin-bottom:20px">
+          <label>🏕️ Camp:</label>
+          <button class="camp-filter-btn all-btn active" onclick="setPiecesCampFilter('')" id="pcfbtn-all">All Camps</button>
+          <button class="camp-filter-btn" onclick="setPiecesCampFilter('AQ-M1')" id="pcfbtn-AQ-M1">AQ-M1</button>
+          <button class="camp-filter-btn" onclick="setPiecesCampFilter('AQ-M2')" id="pcfbtn-AQ-M2">AQ-M2</button>
+          <button class="camp-filter-btn" onclick="setPiecesCampFilter('AQ-F')" id="pcfbtn-AQ-F">AQ-F</button>
+          <button class="camp-filter-btn" onclick="setPiecesCampFilter('SR-M')" id="pcfbtn-SR-M">SR-M</button>
+          <button class="camp-filter-btn" onclick="setPiecesCampFilter('SR-F')" id="pcfbtn-SR-F">SR-F</button>
+          <span id="pieces-camp-filter-label" style="margin-left:auto;font-size:12px;color:var(--text-muted)"></span>
+        </div>
+        <div class="panel">
+          <div class="panel-header">
+            <h3 id="pieces-panel-title">📦 Pieces Overview</h3>
+            <span id="pieces-record-count" style="font-size:13px;color:var(--text-muted)"></span>
+          </div>
+          <div class="panel-body" style="padding:0">
+            <div class="report-table-wrap">
+              <table class="report-table" id="pieces-table">
+                <thead id="pieces-thead"></thead>
+                <tbody id="pieces-tbody"></tbody>
+                <tfoot id="pieces-tfoot"></tfoot>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- OLD PIECES PAGE (kept hidden for backward compat, effectively replaced) -->
+    <div class="page" id="page-pieces" style="display:none!important"></div>
+
+    <!-- UNION STAFF -->
+    <div class="page" id="page-union-staff">
+      <div class="panel" style="margin-bottom:20px">
+        <div class="panel-header"><h3>🔍 Search Union Staff</h3></div>
+        <div class="panel-body">
+          <div class="form-grid" style="max-width:340px">
+            <div class="form-group">
+              <label>Search by Name</label>
+              <input type="text" id="union-staff-search" placeholder="Type any part of the name…" oninput="renderUnionStaff()" autocomplete="off" />
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- Camp Filter Bar -->
+      <div class="camp-filter-bar" id="union-staff-camp-filter-bar" style="margin-bottom:20px">
+        <label>🏕️ ALL CAMPS:</label>
+        <button class="camp-filter-btn all-btn active" onclick="setUnionStaffCampFilter('')" id="usfbtn-all">All Camps</button>
+        <button class="camp-filter-btn" onclick="setUnionStaffCampFilter('AQ-M1')" id="usfbtn-AQ-M1">AQ-M1</button>
+        <button class="camp-filter-btn" onclick="setUnionStaffCampFilter('AQ-M2')" id="usfbtn-AQ-M2">AQ-M2</button>
+        <button class="camp-filter-btn" onclick="setUnionStaffCampFilter('AQ-F')" id="usfbtn-AQ-F">AQ-F</button>
+        <button class="camp-filter-btn" onclick="setUnionStaffCampFilter('SR-M')" id="usfbtn-SR-M">SR-M</button>
+        <button class="camp-filter-btn" onclick="setUnionStaffCampFilter('SR-F')" id="usfbtn-SR-F">SR-F</button>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <h3>Union Staff Directory</h3>
+          <span id="union-staff-count" style="font-size:13px;color:var(--text-muted)">0 staff</span>
+        </div>
+        <div class="panel-body" style="padding:0">
+          <div class="report-table-wrap">
+            <table class="report-table">
+              <thead><tr>
+                <th>Union Staff Name</th>
+                <th>Camp Location</th>
+              </tr></thead>
+              <tbody id="union-staff-tbody"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- PIECES DAILY & MONTHLY (legacy hidden page - IDs removed to avoid duplicates) -->
+    <div class="page" id="page-pieces">
+      <div class="panel" style="margin-bottom:20px">
+        <div class="panel-header"><h3>🔍 Filters</h3></div>
+        <div class="panel-body">
+          <div class="form-grid cols3">
+            <div class="form-group">
+              <label>From Date</label>
+              <input type="date" />
+            </div>
+            <div class="form-group">
+              <label>To Date</label>
+              <input type="date" />
+            </div>
+          </div>
+        </div>
+      </div>
+      <div id="pieces-summary-cards" style="display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:20px"></div>
+      <!-- Camp Filter Bar -->
+      <div class="camp-filter-bar" id="pieces-camp-filter-bar" style="margin-bottom:20px">
+        <label>🏕️ Camp:</label>
+        <button class="camp-filter-btn all-btn active" onclick="setPiecesCampFilter('')" id="pcfbtn-all">All Camps</button>
+        <button class="camp-filter-btn" onclick="setPiecesCampFilter('AQ-M1')" id="pcfbtn-AQ-M1">AQ-M1</button>
+        <button class="camp-filter-btn" onclick="setPiecesCampFilter('AQ-M2')" id="pcfbtn-AQ-M2">AQ-M2</button>
+        <button class="camp-filter-btn" onclick="setPiecesCampFilter('AQ-F')" id="pcfbtn-AQ-F">AQ-F</button>
+        <button class="camp-filter-btn" onclick="setPiecesCampFilter('SR-M')" id="pcfbtn-SR-M">SR-M</button>
+        <button class="camp-filter-btn" onclick="setPiecesCampFilter('SR-F')" id="pcfbtn-SR-F">SR-F</button>
+        <span id="pieces-camp-filter-label" style="margin-left:auto;font-size:12px;color:var(--text-muted)"></span>
+      </div>
+      <div class="panel">
+        <div class="panel-header">
+          <h3 id="pieces-panel-title">📦 Pieces Overview</h3>
+          <span id="pieces-record-count" style="font-size:13px;color:var(--text-muted)"></span>
+        </div>
+        <div class="panel-body" style="padding:0">
+          <div class="report-table-wrap">
+            <table class="report-table" id="pieces-table">
+              <thead id="pieces-thead"></thead>
+              <tbody id="pieces-tbody"></tbody>
+              <tfoot id="pieces-tfoot"></tfoot>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- UNIFORMS -->
+    <div class="page" id="page-uniforms">
+      <div class="panel">
+        <div class="panel-header">
+          <h3>👕 Uniform Items</h3>
+          <button class="btn btn-accent btn-sm" onclick="openAddUniform()">+ Add Item</button>
+        </div>
+        <div class="panel-body"><div class="item-grid" id="uniforms-grid"></div></div>
+      </div>
+    </div>
+
+    <!-- SETTINGS -->
+    <div class="page" id="page-settings">
+
+      <!-- Supabase key warning — shown if key looks wrong -->
+      <div id="supa-key-warning" style="display:none;background:#fff3cd;border:1px solid #ffc107;border-radius:8px;padding:14px 18px;margin-bottom:18px;font-size:13px;line-height:1.7">
+        <strong style="color:#856404">⚠️ Wrong Supabase API Key Detected</strong><br>
+        Your current key starts with <code>sb_publishable_</code> which is <strong>not supported</strong> by the Supabase REST API and will cause <strong>401 permission errors</strong> on every save.<br>
+        <strong>Fix:</strong> Go to your <a href="https://supabase.com/dashboard" target="_blank" style="color:#0d6efd">Supabase Dashboard</a> → Project Settings → API → copy the <strong>anon public</strong> key (starts with <code>eyJ...</code>) → open this HTML file and replace the value of <code>SUPA_KEY</code>.
+      </div>
+
+      <div class="settings-tabs">
+        <div class="stab active" id="stab-btn-berkeley" onclick="switchTab('berkeley',this)">👤 Berkeley Staff</div>
+        <div class="stab" id="stab-btn-passwords" onclick="switchTab('passwords',this)">🔑 Change Passwords</div>
+        <div class="stab" id="stab-btn-loginhistory" onclick="switchTab('loginhistory',this);loadLoginHistory()">🕐 Login / Logout History</div>
+        <div class="stab" id="stab-btn-importexport" onclick="switchTab('importexport',this)">📦 Import / Export Data</div>
+      </div>
+
+      <!-- Berkeley Staff Tab -->
+      <div class="stab-panel active" id="stab-berkeley">
+        <div id="settings-alert" class="alert" style="display:none"></div>
+        <div class="panel">
+          <div class="panel-header">
+            <h3>Berkeley Staff Management</h3>
+            <button class="btn btn-accent btn-sm" onclick="openAddStaff()">+ Add Staff</button>
+          </div>
+          <div class="panel-body">
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:18px">Manage Berkeley staff members who collect laundry at each camp. The assigned staff name auto-fills in the Daily Entry form when a location is selected.</p>
+            <div class="item-grid" id="berkeley-staff-grid"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Password Change Tab -->
+      <div class="stab-panel" id="stab-passwords">
+        <div id="pwd-alert" class="alert" style="display:none"></div>
+        <div class="panel">
+          <div class="panel-header"><h3>🔑 Change Account Password</h3></div>
+          <div class="panel-body">
+            <p style="font-size:13px;color:var(--text-muted);margin-bottom:20px">Select any staff or admin account to update its password. Changes take effect immediately.</p>
+            <div class="form-grid" style="max-width:520px">
+              <div class="form-group">
+                <label>Select Account</label>
+                <select id="pwd-account-select" onchange="onPwdAccountChange()">
+                  <option value="">-- Select Account --</option>
+                  <option value="admin-suhail">Admin Suhail (Admin)</option>
+                  <option value="mr.prosper">Mr.Prosper — AQ-M1 (Staff)</option>
+                  <option value="mr.mokate">Mr.Mokate — AQ-M2 (Staff)</option>
+                  <option value="aq.female">AQ Female staff — AQ-F (Staff)</option>
+                  <option value="mr.tofik">SR Male Staff — SR-M (Staff)</option>
+                  <option value="sr.female">SR Female Staff — SR-F (Staff)</option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Current Password</label>
+                <input type="text" id="pwd-current-display" readonly style="background:#f0f0f0;cursor:not-allowed;font-family:'DM Mono',monospace" placeholder="Select account to view" />
+              </div>
+              <div class="form-group">
+                <label>New Password</label>
+                <input type="password" id="pwd-new" placeholder="Enter new password…" />
+              </div>
+              <div class="form-group">
+                <label>Confirm New Password</label>
+                <input type="password" id="pwd-confirm" placeholder="Re-enter new password…" />
+              </div>
+            </div>
+            <div class="btn-group" style="margin-top:8px">
+              <button class="btn btn-primary" onclick="savePassword()">🔑 Update Password</button>
+              <button class="btn btn-outline" onclick="clearPwdForm()">✕ Clear</button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Login History Tab -->
+      <div class="stab-panel" id="stab-loginhistory">
+        <div class="panel">
+          <div class="panel-header">
+            <h3>🕐 Staff Login / Logout History</h3>
+            <button class="btn btn-outline btn-sm" onclick="loadLoginHistory()">↺ Refresh</button>
+          </div>
+          <div class="panel-body">
+            <div class="form-grid" style="max-width:560px;margin-bottom:18px">
+              <div class="form-group">
+                <label>Filter by Date</label>
+                <input type="date" id="lh-filter-date" onchange="loadLoginHistory()" />
+              </div>
+              <div class="form-group">
+                <label>Filter by Staff</label>
+                <select id="lh-filter-staff" onchange="loadLoginHistory()">
+                  <option value="">All Staff</option>
+                  <option value="mr.prosper">Mr.Prosper — AQ-M1</option>
+                  <option value="mr.mokate">Mr.Mokate — AQ-M2</option>
+                  <option value="aq.female">AQ Female Staff — AQ-F</option>
+                  <option value="mr.tofik">Mr.Tofik — SR-M</option>
+                  <option value="sr.female">SR Female Staff — SR-F</option>
+                </select>
+              </div>
+            </div>
+            <div id="lh-count" style="font-size:13px;color:var(--text-muted);margin-bottom:12px"></div>
+            <div class="report-table-wrap">
+              <table class="report-table">
+                <thead><tr><th>Date</th><th>Time Login</th><th>Time Logout</th><th>Staff Account</th><th>Duration</th></tr></thead>
+                <tbody id="lh-tbody"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Import/Export Tab -->
+      <div class="stab-panel" id="stab-importexport">
+        <div id="import-alert" class="alert" style="display:none"></div>
+        <div class="ie-grid">
+
+          <div class="ie-card">
+            <h4>📤 Export Full Backup</h4>
+            <p>Download a complete backup of all entries, uniforms, Berkeley staff, and union staff names for safekeeping or transfer.</p>
+            <div class="btn-group" style="margin-top:0">
+              <button class="btn btn-primary btn-sm" onclick="exportAllJSON()">📦 JSON Backup</button>
+              <button class="btn btn-accent btn-sm" onclick="exportAllCSV()">📊 CSV Backup</button>
+            </div>
+          </div>
+
+          <div class="ie-card">
+            <h4>📋 Export Report Data</h4>
+            <p>Export only the laundry submission records. You can also export from the Report page with date/location filters applied.</p>
+            <div class="btn-group" style="margin-top:0">
+              <button class="btn btn-primary btn-sm" onclick="exportReportJSON()">📦 Entries JSON</button>
+              <button class="btn btn-accent btn-sm" onclick="exportReportCSV()">📊 Entries CSV</button>
+            </div>
+          </div>
+
+          <div class="ie-card">
+            <h4>📥 Import from JSON</h4>
+            <p>Restore data from a previously exported JSON backup. New entries will be <strong>merged</strong> — existing records won't be duplicated.</p>
+            <div class="drop-zone" onclick="document.getElementById('import-json-input').click()">
+              <div class="dz-icon">📦</div>
+              <p>Click to select a <strong>.json</strong> backup file</p>
+            </div>
+            <input type="file" id="import-json-input" accept=".json" onchange="importJSON(this)" />
+          </div>
+
+          <div class="ie-card">
+            <h4>📥 Import Entries from CSV</h4>
+            <p>Import laundry entries from a CSV file. The file must use the same column headers as the exported format.</p>
+            <div class="drop-zone" onclick="document.getElementById('import-csv-input').click()">
+              <div class="dz-icon">📊</div>
+              <p>Click to select a <strong>.csv</strong> entries file</p>
+            </div>
+            <input type="file" id="import-csv-input" accept=".csv" onchange="importCSV(this)" />
+          </div>
+
+        </div>
+
+        <!-- DANGER ZONE — Admin Only -->
+        <div style="margin-top:24px;border:2px solid #fca5a5;border-radius:10px;padding:20px 22px;background:#fff5f5">
+          <h4 style="color:#991b1b;margin-bottom:6px;font-size:15px">🗑️ Danger Zone — Admin Only</h4>
+          <p style="font-size:13px;color:#7f1d1d;margin-bottom:14px;line-height:1.5">
+            Use these options carefully. Deleted data <strong>cannot be recovered</strong>.<br>
+            Useful for resetting the system after training or testing.
+          </p>
+          <div style="display:flex;gap:10px;flex-wrap:wrap">
+            <button class="btn btn-danger" onclick="deleteAllEntries()">🗑️ Delete ALL Entries</button>
+            <button class="btn btn-danger" style="background:#7c3aed" onclick="deleteAllSessions()">🗑️ Clear Login History</button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- Union Staff Report Modal -->
+<div id="union-report-modal">
+  <div id="union-report-inner">
+    <h3 id="union-report-title">👷 Union Staff Report</h3>
+    <div class="report-type-btns">
+      <button class="rtype-btn active" id="rtype-daily" onclick="switchReportType('daily')">📅 Daily Report</button>
+      <button class="rtype-btn" id="rtype-monthly" onclick="switchReportType('monthly')">📆 Monthly Report</button>
+    </div>
+    <div id="union-report-content"></div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;margin-top:18px">
+      <button class="btn btn-outline btn-sm" onclick="closeUnionReport()">✕ Close</button>
+      <button class="btn btn-primary btn-sm" onclick="printUnionStaffReport()">🖨️ Print Report</button>
+    </div>
+  </div>
+</div>
+
+<!-- THERMAL RECEIPT (hidden — only shown at print time via JS) -->
+<div id="thermal-receipt"></div>
+
+<!-- Thermal Preview Modal -->
+<div id="thermal-modal">
+  <div id="thermal-modal-inner">
+    <h3>🖨️ Receipt Preview</h3>
+    <div id="thermal-preview-content" class="thermal-preview-wrap"></div>
+    <div class="thermal-action-bar">
+      <button class="btn btn-outline btn-sm" onclick="closeThermalModal()">✕ Close</button>
+      <button class="btn btn-primary btn-sm" onclick="printThermal()">🖨️ Print Receipt</button>
+    </div>
+  </div>
+</div>
+
+<!-- Wrong Camp Warning Modal -->
+<div id="wrong-camp-modal">
+  <div id="wrong-camp-modal-inner">
+    <div class="wc-header">
+      <div class="wc-icon">⚠️</div>
+      <div>
+        <h3 style="font-size:17px;font-weight:800;color:var(--primary);margin:0">Staff from a Different Camp</h3>
+        <p style="font-size:13px;color:var(--text-muted);margin:3px 0 0">This union staff belongs to another camp location.</p>
+      </div>
+    </div>
+    <div class="wc-info-box" id="wrong-camp-info-box"></div>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:18px;line-height:1.6">
+      Do you still want to proceed with this entry, or do you want to change the name?
+    </p>
+    <div class="wc-actions">
+      <button class="btn btn-outline" onclick="closeWrongCampModal()">✕ No — Change Name</button>
+      <button class="btn btn-accent" onclick="confirmWrongCampEntry()">✔ Yes — Proceed Anyway</button>
+    </div>
+  </div>
+</div>
+
+<!-- Duplicate Entry Warning Modal -->
+<div id="duplicate-modal">
+  <div id="duplicate-modal-inner">
+    <div class="dup-header">
+      <div class="dup-icon">🚫</div>
+      <div>
+        <h3>Duplicate Entry Blocked</h3>
+        <p id="dup-modal-subtitle">This union staff has already submitted today.</p>
+      </div>
+    </div>
+    <div class="dup-info-box">
+      <div class="dup-info-row"><span class="lbl">Union Staff</span><span class="val" id="dup-staff-name">—</span></div>
+      <div class="dup-info-row"><span class="lbl">Location</span><span class="val" id="dup-location">—</span></div>
+      <div class="dup-info-row"><span class="lbl">Date</span><span class="val" id="dup-date">—</span></div>
+      <div class="dup-info-row"><span class="lbl">Time Submitted</span><span class="val" id="dup-time">—</span></div>
+      <div class="dup-info-row"><span class="lbl">Total Pieces</span><span class="val" id="dup-total">—</span></div>
+      <div class="dup-items-list" id="dup-items-list"></div>
+    </div>
+    <p style="font-size:13px;color:var(--text-muted);margin-bottom:18px;line-height:1.6">
+      A laundry submission for this staff member already exists for today.<br>
+      You can <strong>edit the existing entry</strong> if quantities need to be updated.
+    </p>
+    <div class="dup-actions">
+      <button class="btn btn-outline" onclick="closeDuplicateModal()">✕ Cancel</button>
+      <button class="btn btn-primary" id="dup-edit-btn" onclick="closeDuplicateModal(); openEditEntry(window._dupEntryId)">✏️ Edit Existing Entry</button>
+    </div>
+  </div>
+</div>
+
+<!-- Print Options Modal (Daily Report) -->
+<div class="modal-overlay" id="print-options-modal">
+  <div class="modal" style="width:560px;max-width:96vw">
+    <h3>🖨️ Print Options — Daily Report</h3>
+    <p style="color:var(--text-muted);font-size:13px;margin-bottom:18px">Choose what to include in your printed statement.</p>
+
+    <!-- View Mode -->
+    <div style="margin-bottom:20px">
+      <label style="font-weight:700;font-size:12px;text-transform:uppercase;color:var(--text-muted);letter-spacing:.5px;display:block;margin-bottom:10px">📋 View Mode</label>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:8px;padding:10px 16px;border:2px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;transition:all .18s" id="pmode-staff-label">
+          <input type="radio" name="print-view-mode" id="pmode-staff" value="staff" checked onchange="onPrintModeChange()" style="accent-color:var(--primary);width:15px;height:15px">
+          👤 Staff Serial-wise
+          <span style="font-size:11px;font-weight:400;color:var(--text-muted);display:block">One row per staff member</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;padding:10px 16px;border:2px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;transition:all .18s" id="pmode-totals-label">
+          <input type="radio" name="print-view-mode" id="pmode-totals" value="totals" onchange="onPrintModeChange()" style="accent-color:var(--primary);width:15px;height:15px">
+          📊 Totals Only
+          <span style="font-size:11px;font-weight:400;color:var(--text-muted);display:block">Items qty + grand total only</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Column options (hidden when Totals Only) -->
+    <div id="popt-columns-section" style="margin-bottom:16px">
+      <label style="font-weight:700;font-size:12px;text-transform:uppercase;color:var(--text-muted);letter-spacing:.5px;display:block;margin-bottom:10px">Table Columns</label>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <label class="print-opt-check"><input type="checkbox" id="popt-staff" checked> Union Staff Name</label>
+        <div id="popt-items-list" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+      </div>
+    </div>
+
+    <div id="popt-selectall-section" style="margin-bottom:20px">
+      <label style="font-weight:700;font-size:12px;text-transform:uppercase;color:var(--text-muted);letter-spacing:.5px;display:block;margin-bottom:10px">Select All / None</label>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-outline btn-sm" onclick="setPrintItemsAll(true)">✔ Select All Items</button>
+        <button class="btn btn-outline btn-sm" onclick="setPrintItemsAll(false)">✕ Deselect All Items</button>
+      </div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="applyPrintOptions()">Preview & Print</button>
+      <button class="btn btn-outline" onclick="closeAllModals()">✕ Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Pieces Print Options Modal (Monthly Report) -->
+<div class="modal-overlay" id="pieces-print-options-modal">
+  <div class="modal" style="width:560px;max-width:96vw">
+    <h3>🖨️ Print Options — Monthly Report</h3>
+    <p style="color:var(--text-muted);font-size:13px;margin-bottom:18px">Choose what to include in your printed statement.</p>
+
+    <!-- View Mode -->
+    <div style="margin-bottom:20px">
+      <label style="font-weight:700;font-size:12px;text-transform:uppercase;color:var(--text-muted);letter-spacing:.5px;display:block;margin-bottom:10px">📋 View Mode</label>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <label style="display:flex;align-items:center;gap:8px;padding:10px 16px;border:2px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;transition:all .18s" id="ppm-staff-label">
+          <input type="radio" name="pieces-print-mode" id="ppm-staff" value="staff" checked onchange="onPiecesPrintModeChange()" style="accent-color:var(--primary);width:15px;height:15px">
+          👤 Staff Serial-wise
+          <span style="font-size:11px;font-weight:400;color:var(--text-muted);display:block">One row per staff with monthly status</span>
+        </label>
+        <label style="display:flex;align-items:center;gap:8px;padding:10px 16px;border:2px solid var(--border);border-radius:8px;cursor:pointer;font-size:13px;font-weight:600;transition:all .18s" id="ppm-totals-label">
+          <input type="radio" name="pieces-print-mode" id="ppm-totals" value="totals" onchange="onPiecesPrintModeChange()" style="accent-color:var(--primary);width:15px;height:15px">
+          📊 Totals Only
+          <span style="font-size:11px;font-weight:400;color:var(--text-muted);display:block">Items qty + grand total only</span>
+        </label>
+      </div>
+    </div>
+
+    <!-- Column options (hidden when Totals Only) -->
+    <div id="ppopt-columns-section" style="margin-bottom:16px">
+      <label style="font-weight:700;font-size:12px;text-transform:uppercase;color:var(--text-muted);letter-spacing:.5px;display:block;margin-bottom:10px">Table Columns</label>
+      <div style="display:flex;gap:10px;flex-wrap:wrap">
+        <label class="print-opt-check"><input type="checkbox" id="ppopt-staff" checked> Union Staff Name</label>
+        <div id="ppopt-items-list" style="display:flex;gap:8px;flex-wrap:wrap"></div>
+      </div>
+    </div>
+
+    <div id="ppopt-selectall-section" style="margin-bottom:20px">
+      <label style="font-weight:700;font-size:12px;text-transform:uppercase;color:var(--text-muted);letter-spacing:.5px;display:block;margin-bottom:10px">Select All / None</label>
+      <div style="display:flex;gap:8px">
+        <button class="btn btn-outline btn-sm" onclick="setPiecePrintItemsAll(true)">✔ Select All Items</button>
+        <button class="btn btn-outline btn-sm" onclick="setPiecePrintItemsAll(false)">✕ Deselect All Items</button>
+      </div>
+    </div>
+
+    <div class="btn-group">
+      <button class="btn btn-primary" onclick="applyPiecesPrintOptions()">Preview & Print</button>
+      <button class="btn btn-outline" onclick="closeAllModals()">✕ Cancel</button>
+    </div>
+  </div>
+</div>
+
+<div id="print-preview-modal">
+  <div id="print-modal-inner">
+    <div class="print-actions no-print">
+      <button class="btn btn-outline" onclick="closePrintPreview()">✕ Close</button>
+      <button class="btn btn-primary" onclick="printStatement()">🖨️ Print</button>
+    </div>
+    <div id="print-content"></div>
+  </div>
+</div>
+
+<!-- Modal: Edit Entry -->
+<div class="modal-overlay" id="edit-entry-modal">
+  <div class="modal" style="width:520px;max-width:96vw">
+    <h3>✏️ Edit Entry</h3>
+    <div id="edit-entry-time-note" style="font-size:12px;color:var(--text-muted);margin-bottom:10px;background:var(--surface2);padding:6px 12px;border-radius:6px;display:block"></div>
+    <div class="form-grid cols3" style="margin-bottom:14px">
+      <div class="form-group"><label>Date</label><input type="date" id="edit-entry-date" /></div>
+      <div class="form-group">
+        <label>Camp Location</label>
+        <select id="edit-entry-location" onchange="onEditLocationChange()">
+          <option value="">-- Select --</option>
+          <option>AQ-M1</option><option>AQ-M2</option>
+          <option>AQ-F</option><option>SR-M</option><option>SR-F</option>
+        </select>
+      </div>
+      <div class="form-group">
+        <label>Berkeley Staff</label>
+        <input type="text" id="edit-entry-berkeley" readonly style="background:#f0f0f0;cursor:not-allowed" />
+      </div>
+    </div>
+    <div class="form-group" style="margin-bottom:14px;max-width:260px">
+      <label>Union Staff Name</label>
+      <input type="text" id="edit-entry-union-staff" placeholder="Staff name" />
+    </div>
+    <div style="max-height:280px;overflow-y:auto;border:1px solid var(--border);border-radius:8px;margin-bottom:14px">
+      <table class="items-table" style="margin:0">
+        <thead><tr><th>#</th><th>Item</th><th style="text-align:center">Qty</th></tr></thead>
+        <tbody id="edit-items-tbody"></tbody>
+      </table>
+    </div>
+    <div class="btn-group" style="margin-top:0">
+      <button class="btn btn-primary" onclick="saveEditEntry()">💾 Save Changes</button>
+      <button class="btn btn-success btn-sm" onclick="printEditEntry()">🖨️ Print</button>
+      <button class="btn btn-danger btn-sm admin-edit-delete" onclick="deleteEditEntry()" style="margin-left:auto">🗑️ Delete Entry</button>
+      <button class="btn btn-outline" onclick="closeAllModals()">✕ Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Uniform -->
+<div class="modal-overlay" id="uniform-modal">
+  <div class="modal">
+    <h3 id="modal-uniform-title">Add Uniform Item</h3>
+    <div class="form-group"><label>Item Name</label><input type="text" id="modal-item-name" placeholder="e.g. Chef Jacket" onkeydown="if(event.key==='Enter')saveUniform()" /></div>
+    <div class="btn-group" style="margin-top:8px">
+      <button class="btn btn-primary" onclick="saveUniform()">Save</button>
+      <button class="btn btn-outline" onclick="closeAllModals()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Berkeley Staff -->
+<div class="modal-overlay" id="staff-modal">
+  <div class="modal">
+    <h3 id="modal-staff-title">Add Berkeley Staff</h3>
+    <div class="form-group"><label>Staff Name</label><input type="text" id="modal-staff-name" placeholder="e.g. Mr. Johnson" /></div>
+    <div class="form-group">
+      <label>Assigned Camp Location</label>
+      <select id="modal-staff-location">
+        <option value="">-- Any / Multiple --</option>
+        <option>AQ-M1</option><option>AQ-M2</option>
+        <option>AQ-F</option><option>SR-M</option><option>SR-F</option>
+      </select>
+    </div>
+    <div class="btn-group" style="margin-top:8px">
+      <button class="btn btn-primary" onclick="saveStaff()">Save Staff</button>
+      <button class="btn btn-outline" onclick="closeAllModals()">Cancel</button>
+    </div>
+  </div>
+</div>
+
+
+
+<!-- DB Loader Overlay -->
+<div id="db-loader" style="display:none;position:fixed;inset:0;background:rgba(26,58,92,.85);z-index:2000;flex-direction:column;align-items:center;justify-content:center;gap:16px">
+  <div style="width:48px;height:48px;border:4px solid rgba(255,255,255,.2);border-top-color:#e8a020;border-radius:50%;animation:spin .8s linear infinite"></div>
+  <div id="db-loader-msg" style="color:#fff;font-family:'DM Sans',sans-serif;font-size:15px;font-weight:600">Connecting…</div>
+</div>
+<!-- DB Error Banner -->
+<div id="db-error-banner" style="display:none;position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:#c0392b;color:#fff;padding:12px 22px;border-radius:8px;z-index:3000;font-family:'DM Sans',sans-serif;font-size:14px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.3);align-items:center;gap:10px">
+  <span id="db-error-msg"></span>
+  <button onclick="this.parentElement.style.display='none'" style="background:transparent;border:none;color:#fff;font-size:16px;cursor:pointer;padding:0 4px">✕</button>
+</div>
+<!-- Sync Badge -->
+<div id="sync-badge" style="position:fixed;bottom:20px;right:20px;background:#2e7d52;color:#fff;padding:8px 16px;border-radius:20px;font-family:'DM Sans',sans-serif;font-size:12px;font-weight:700;z-index:1000;opacity:0;transition:opacity .5s;pointer-events:none">⟳ Synced</div>
+<style>@keyframes spin{to{transform:rotate(360deg)}}</style>
+
+<script>
+// ══════════════════════════════════════════════════════════════════
+// SUPABASE CONFIG
+// ══════════════════════════════════════════════════════════════════
+const SUPA_URL = 'https://kdjxkvhkejftoszmkpxg.supabase.co';
+// IMPORTANT: This must be your Supabase anon/public key (starts with eyJ...)
+// Get it from: Supabase Dashboard → Project Settings → API → anon public
+// The sb_publishable_ key causes 401 RLS errors on INSERT/UPDATE
+const SUPA_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImtkanhrdmhrZWpmdG9zem1rcHhnIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg1Njc5OTUsImV4cCI6MjA5NDE0Mzk5NX0.QtX3gUJAxDnwP0SHWzvLKOqCVsJAwRlmFoXHqjdUSdI';
+
+// ── Supabase REST helpers ──────────────────────────────────────────
+async function sbFetch(path, opts = {}){
+  const url = SUPA_URL + '/rest/v1/' + path;
+  const headers = {
+    'apikey': SUPA_KEY,
+    'Authorization': 'Bearer ' + SUPA_KEY,
+    'Content-Type': 'application/json',
+    'Prefer': opts.prefer || 'return=representation',
+    ...(opts.headers || {})
+  };
+  const res = await fetch(url, { method: opts.method || 'GET', headers, body: opts.body ? JSON.stringify(opts.body) : undefined });
+  if(!res.ok){
+    const txt = await res.text();
+    throw new Error(`Supabase error ${res.status}: ${txt}`);
+  }
+  const ct = res.headers.get('content-type') || '';
+  if(ct.includes('json') && res.status !== 204) return res.json();
+  return null;
+}
+
+// ── In-memory cache (so UI never waits on every render) ────────────
+const CACHE = {
+  entries: [],
+  uniforms: ['Shirt','T-Shirt','Pant','Scarf','Vest','Coat / Jacket','Apron','Sweater','Chef Jacket'],
+  berkeleyStaff: [
+    {id:1,name:'Mr.Prosper',location:'AQ-M1'},
+    {id:2,name:'Mr.Mokate',location:'AQ-M2'},
+    {id:3,name:'Mr.Tofik',location:'SR-M'},
+  ],
+  unionNames: [],
+  loaded: false,
+};
+
+// ── DB object — same API as before but async-backed ───────────────
+const DB = {
+  get entries(){ return CACHE.entries; },
+  get uniforms(){ return CACHE.uniforms; },
+  set uniforms(v){ CACHE.uniforms = v; },
+  get berkeleyStaff(){ return CACHE.berkeleyStaff; },
+  set berkeleyStaff(v){ CACHE.berkeleyStaff = v; },
+  get unionNames(){ return CACHE.unionNames; },
+  set unionNames(v){ CACHE.unionNames = v; },
+};
+
+// ── Loading overlay helpers ────────────────────────────────────────
+function showLoader(msg){ document.getElementById('db-loader').style.display='flex'; document.getElementById('db-loader-msg').textContent = msg||'Syncing…'; }
+function hideLoader(){ document.getElementById('db-loader').style.display='none'; }
+function showDbError(msg){ document.getElementById('db-error-msg').textContent = msg; document.getElementById('db-error-banner').style.display='flex'; setTimeout(()=>document.getElementById('db-error-banner').style.display='none', 6000); }
+
+// ── Bootstrap: load everything from Supabase ──────────────────────
+async function loadAllFromSupabase(){
+  showLoader('Connecting to database…');
+  try {
+    // 1. Entries
+    const entries = await sbFetch('entries?select=*&order=created_at.asc');
+    CACHE.entries = (entries||[]).map(rowToEntry);
+
+    // 2. Berkeley staff
+    const staff = await sbFetch('berkeley_staff?select=*&order=id.asc');
+    if(staff && staff.length > 0) CACHE.berkeleyStaff = staff.map(r=>({id:r.id, name:r.name, location:r.location||''}));
+
+    // 3. Uniform items
+    const uniforms = await sbFetch('uniform_items?select=*&order=sort_order.asc,id.asc');
+    if(uniforms && uniforms.length > 0) CACHE.uniforms = uniforms.map(r=>r.name);
+
+    // 4. Union staff names (derived from entries)
+    const allNames = [...new Set(CACHE.entries.map(e=>e.unionStaff).filter(Boolean))];
+    CACHE.unionNames = allNames;
+
+    CACHE.loaded = true;
+    hideLoader();
+    renderDashboard();
+  } catch(err){
+    hideLoader();
+    showDbError('❌ Database connection failed: ' + err.message);
+    console.error(err);
+    // Fall back to empty cache so app still works offline
+    CACHE.loaded = true;
+    renderDashboard();
+  }
+}
+
+// Convert DB row → app entry object
+function rowToEntry(r){
+  return {
+    id: String(r.id),
+    date: r.date,
+    time: r.time || '',
+    location: r.location,
+    berkeleyStaff: r.berkeley_staff || '',
+    unionStaff: r.union_staff,
+    items: typeof r.items === 'object' ? r.items : (r.items ? JSON.parse(r.items) : {}),
+    grandTotal: parseInt(r.grand_total) || 0,
+  };
+}
+
+// ── Realtime sync via Supabase broadcast ─────────────────────────
+let realtimeChannel = null;
+function startRealtime(){
+  // Use Supabase Realtime (websocket) to subscribe to INSERT/UPDATE/DELETE on entries
+  const wsUrl = SUPA_URL.replace('https://','wss://') + '/realtime/v1/websocket?apikey=' + SUPA_KEY + '&vsn=1.0.0';
+  let ws, heartbeat;
+  let reconnectDelay = 2000;
+
+  function connect(){
+    ws = new WebSocket(wsUrl);
+    ws.onopen = () => {
+      reconnectDelay = 2000;
+      // Join the realtime channel for public:entries
+      ws.send(JSON.stringify({topic:'realtime:public:entries', event:'phx_join', payload:{config:{broadcast:{self:false},presence:{key:''},postgres_changes:[{event:'*',schema:'public',table:'entries'}]}}, ref:'1'}));
+      heartbeat = setInterval(()=>{ try{ ws.send(JSON.stringify({topic:'phoenix',event:'heartbeat',payload:{},ref:'hb'})); } catch(e){} }, 25000);
+    };
+    ws.onmessage = async (msg) => {
+      try {
+        const data = JSON.parse(msg.data);
+        if(data.event === 'postgres_changes' || (data.payload && data.payload.data)){
+          // Reload entries from Supabase
+          const entries = await sbFetch('entries?select=*&order=created_at.asc');
+          CACHE.entries = (entries||[]).map(rowToEntry);
+          const allNames = [...new Set(CACHE.entries.map(e=>e.unionStaff).filter(Boolean))];
+          CACHE.unionNames = allNames;
+          // Refresh current view silently
+          const activePage = document.querySelector('.page.active')?.id;
+          if(activePage === 'page-dashboard') renderDashboard();
+          if(activePage === 'page-report'){ renderReport(); renderPieces(); }
+          showSyncBadge();
+        }
+      } catch(e){}
+    };
+    ws.onclose = () => {
+      clearInterval(heartbeat);
+      setTimeout(connect, reconnectDelay);
+      reconnectDelay = Math.min(reconnectDelay * 1.5, 30000);
+    };
+    ws.onerror = () => ws.close();
+  }
+  connect();
+}
+
+function showSyncBadge(){
+  const badge = document.getElementById('sync-badge');
+  if(!badge) return;
+  badge.style.opacity = '1';
+  setTimeout(()=>{ badge.style.opacity='0'; }, 2000);
+}
+
+// ── ASYNC SAVE ENTRY ──────────────────────────────────────────────
+async function saveEntryToSupabase(entry){
+  const row = {
+    date: entry.date,
+    time: entry.time,
+    location: entry.location,
+    berkeley_staff: entry.berkeleyStaff,
+    union_staff: entry.unionStaff,
+    items: entry.items,
+    grand_total: entry.grandTotal,
+  };
+  const result = await sbFetch('entries', { method:'POST', body: row, prefer:'return=representation' });
+  // Update local cache with DB-assigned id
+  if(result && result[0]){
+    const savedRow = result[0];
+    // Remove the temp entry and replace with real one
+    const idx = CACHE.entries.findIndex(e=>e.id===entry.id);
+    if(idx > -1) CACHE.entries[idx] = rowToEntry(savedRow);
+    else CACHE.entries.push(rowToEntry(savedRow));
+    return rowToEntry(savedRow);
+  }
+  return entry;
+}
+
+async function updateEntryInSupabase(entry){
+  const row = {
+    date: entry.date,
+    time: entry.time,
+    location: entry.location,
+    berkeley_staff: entry.berkeleyStaff,
+    union_staff: entry.unionStaff,
+    items: entry.items,
+    grand_total: entry.grandTotal,
+  };
+  await sbFetch('entries?id=eq.' + entry.id, { method:'PATCH', body: row, prefer:'return=minimal' });
+  // Update cache
+  const idx = CACHE.entries.findIndex(e=>String(e.id)===String(entry.id));
+  if(idx>-1) CACHE.entries[idx] = {...CACHE.entries[idx], ...entry};
+}
+
+async function saveBerkeleyStaffToSupabase(s){
+  if(s.id && s.id > 0 && CACHE.berkeleyStaff.find(x=>x.id===s.id)){
+    // Update
+    await sbFetch('berkeley_staff?id=eq.'+s.id, { method:'PATCH', body:{name:s.name,location:s.location}, prefer:'return=minimal' });
+  } else {
+    // Insert
+    const result = await sbFetch('berkeley_staff', { method:'POST', body:{name:s.name,location:s.location}, prefer:'return=representation' });
+    if(result && result[0]) s.id = result[0].id;
+  }
+  return s;
+}
+
+async function saveUniformsToSupabase(uniforms){
+  // Delete all, then re-insert in order
+  await sbFetch('uniform_items?id=gt.0', { method:'DELETE', prefer:'return=minimal' });
+  if(uniforms.length > 0){
+    const rows = uniforms.map((name,i)=>({name, sort_order:i}));
+    await sbFetch('uniform_items', { method:'POST', body:rows, prefer:'return=minimal' });
+  }
+}
+
+// ── ACCOUNTS — individual passwords ──────────
+const ACCOUNTS = {
+  'admin-suhail': { pass:'admin123',  role:'admin', display:'Admin Suhail' },
+  'mr.prosper':   { pass:'prosper123', role:'staff', display:'Mr.Prosper',      location:'AQ-M1' },
+  'mr.mokate':    { pass:'mokate123', role:'staff', display:'Mr.Mokate',       location:'AQ-M2' },
+  'aq.female':    { pass:'afc1234',   role:'staff', display:'AQ Female Staff', location:'AQ-F'  },
+  'mr.tofik':     { pass:'tofik123',  role:'staff', display:'Mr.Tofik',        location:'SR-M'  },
+  'sr.female':    { pass:'SFC123',    role:'staff', display:'SR Female Staff', location:'SR-F'  },
+};
+
+let currentUser = null, selectedLoginUsername = null;
+let editingUniformIndex = null, editingStaffId = null;
+
+// ── SESSION TRACKING ──────────────────────────────────────────────
+const STAFF_LABELS = {
+  'mr.prosper':  { display:'Mr.Prosper',       location:'AQ-M1' },
+  'mr.mokate':   { display:'Mr.Mokate',         location:'AQ-M2' },
+  'aq.female':   { display:'AQ Female Staff',   location:'AQ-F'  },
+  'mr.tofik':    { display:'Mr.Tofik',          location:'SR-M'  },
+  'sr.female':   { display:'SR Female Staff',   location:'SR-F'  },
+};
+
+async function logSession(username, action){
+  // Only log staff accounts, not admin
+  if(!STAFF_LABELS[username]) return;
+  const now = new Date();
+  const dateStr = now.toISOString().split('T')[0];
+  const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}:${String(now.getSeconds()).padStart(2,'0')}`;
+  try {
+    await sbFetch('staff_sessions', {
+      method:'POST',
+      body:{ username, action, date:dateStr, time:timeStr },
+      prefer:'return=minimal'
+    });
+  } catch(e){
+    // Silently ignore — table may not exist yet or RLS may block it
+    // This is non-critical; app works fine without session logging
+  }
+}
+
+async function updateOnlineStatus(username, isOnline){
+  if(!STAFF_LABELS[username]) return;
+  try {
+    // Upsert into staff_presence table
+    await sbFetch('staff_presence', {
+      method:'POST',
+      body:{ username, is_online:isOnline, last_seen:new Date().toISOString() },
+      prefer:'resolution=merge-duplicates,return=minimal',
+      headers:{ 'Prefer':'resolution=merge-duplicates,return=minimal' }
+    });
+  } catch(e){
+    // Silently ignore — table may not exist yet
+  }
+}
+
+async function loadOnlineStatus(){
+  if(currentUser?.role !== 'admin') return;
+  try {
+    const rows = await sbFetch('staff_presence?select=*');
+    renderOnlineStatus(rows||[]);
+  } catch(e){
+    // Silently ignore if table doesn't exist
+  }
+}
+
+function renderOnlineStatus(rows){
+  const section = document.getElementById('staff-online-section');
+  const grid = document.getElementById('staff-online-grid');
+  if(!section || !grid) return;
+  section.style.display = 'block';
+
+  const presenceMap = {};
+  rows.forEach(r=>{ presenceMap[r.username]=r; });
+
+  const staffList = Object.entries(STAFF_LABELS);
+  let onlineCount = 0;
+
+  grid.innerHTML = staffList.map(([uname, info])=>{
+    const p = presenceMap[uname];
+    const isOnline = p && p.is_online;
+    if(isOnline) onlineCount++;
+    const lastSeen = p ? new Date(p.last_seen) : null;
+    const lastSeenStr = lastSeen ? `${String(lastSeen.getHours()).padStart(2,'0')}:${String(lastSeen.getMinutes()).padStart(2,'0')}:${String(lastSeen.getSeconds()).padStart(2,'0')} — ${String(lastSeen.getDate()).padStart(2,'0')}/${String(lastSeen.getMonth()+1).padStart(2,'0')}/${String(lastSeen.getFullYear()).slice(-2)}` : 'Never';
+    return `<div class="staff-status-card ${isOnline?'is-online':''}">
+      <span class="${isOnline?'online-dot':'offline-dot'}"></span>
+      <div>
+        <div class="ss-name">${info.display}</div>
+        <div class="ss-loc">${info.location}</div>
+        <div class="ss-time">${isOnline ? '🟢 Online since ' + lastSeenStr : '⚫ Last seen: ' + lastSeenStr}</div>
+      </div>
+    </div>`;
+  }).join('');
+
+  document.getElementById('online-count-badge').textContent = `${onlineCount} of ${staffList.length} online`;
+}
+
+async function loadLoginHistory(){
+  const dateFilter = document.getElementById('lh-filter-date')?.value;
+  const staffFilter = document.getElementById('lh-filter-staff')?.value;
+  let query = 'staff_sessions?select=*&order=created_at.desc&limit=500';
+  if(dateFilter) query += `&date=eq.${dateFilter}`;
+  if(staffFilter) query += `&username=eq.${staffFilter}`;
+  try {
+    const rows = await sbFetch(query);
+    renderLoginHistory(rows||[]);
+  } catch(e){
+    const is404 = e.message.includes('404') || e.message.includes('schema cache') || e.message.includes('PGRST205');
+    const msg = is404
+      ? `<tr><td colspan="5" style="text-align:center;padding:24px">
+          <div style="background:#fffbea;border:1px solid #ffe082;border-radius:8px;padding:16px 20px;display:inline-block;text-align:left;max-width:520px">
+            <strong style="color:#92400e">⚠️ staff_sessions table not found in Supabase</strong><br>
+            <span style="font-size:12px;color:#78350f;line-height:1.7;display:block;margin-top:6px">
+              This feature requires a <code>staff_sessions</code> table in your Supabase project.<br>
+              Go to your Supabase dashboard → SQL Editor and run:<br>
+              <code style="background:#fef3c7;padding:4px 8px;border-radius:4px;display:block;margin-top:6px;font-size:11px">
+                CREATE TABLE staff_sessions (id bigserial PRIMARY KEY, username text, action text, date date, time text, created_at timestamptz DEFAULT now());<br>
+                ALTER TABLE staff_sessions ENABLE ROW LEVEL SECURITY;<br>
+                CREATE POLICY "allow all" ON staff_sessions FOR ALL USING (true) WITH CHECK (true);
+              </code>
+            </span>
+          </div>
+        </td></tr>`
+      : `<tr><td colspan="5" style="text-align:center;color:var(--danger);padding:20px">Failed to load history: ${e.message}</td></tr>`;
+    document.getElementById('lh-tbody').innerHTML = msg;
+  }
+}
+
+function renderLoginHistory(rows){
+  const tbody = document.getElementById('lh-tbody');
+  const countEl = document.getElementById('lh-count');
+  if(!rows.length){
+    if(countEl) countEl.textContent = '0 sessions';
+    tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:24px">No records found for this filter.</td></tr>';
+    return;
+  }
+
+  // Pair logins with their next logout for the same user on the same date
+  // Group by username+date, then match login→logout pairs in time order
+  const sessions = [];
+  const byUserDate = {};
+  rows.forEach(r=>{
+    const key = (r.username||'') + '|' + (r.date||'');
+    if(!byUserDate[key]) byUserDate[key] = [];
+    byUserDate[key].push(r);
+  });
+
+  Object.values(byUserDate).forEach(events=>{
+    // Sort by time ascending
+    events.sort((a,b)=>(a.time||'').localeCompare(b.time||''));
+    const logins  = events.filter(e=>e.action==='login');
+    const logouts = events.filter(e=>e.action==='logout');
+
+    // Match each login with the next logout after it
+    const usedLogouts = new Set();
+    logins.forEach(login=>{
+      const matchLogout = logouts.find(lo=>!usedLogouts.has(lo) && lo.time >= login.time);
+      if(matchLogout) usedLogouts.add(matchLogout);
+      sessions.push({ login, logout: matchLogout||null, username: login.username, date: login.date });
+    });
+    // Any logouts with no matching login (edge case)
+    logouts.forEach(lo=>{
+      if(!usedLogouts.has(lo)){
+        sessions.push({ login: null, logout: lo, username: lo.username, date: lo.date });
+      }
+    });
+  });
+
+  // Sort sessions newest first
+  sessions.sort((a,b)=>{
+    const dateA = (a.date||'') + (a.login?.time || a.logout?.time || '');
+    const dateB = (b.date||'') + (b.login?.time || b.logout?.time || '');
+    return dateB.localeCompare(dateA);
+  });
+
+  if(countEl) countEl.textContent = `${sessions.length} session${sessions.length!==1?'s':''}`;
+
+  tbody.innerHTML = sessions.map(s=>{
+    const info = STAFF_LABELS[s.username]||{display:s.username, location:'—'};
+    const [y,m,d] = (s.date||'').split('-');
+    const dateDisp = d&&m&&y ? `${d}/${m}/${y.slice(-2)}` : s.date||'—';
+    const loginTime  = s.login  ? `<span style="color:#065f46;font-weight:700">${s.login.time}</span>`  : '<span style="color:#aaa">—</span>';
+    const logoutTime = s.logout ? `<span style="color:#991b1b;font-weight:700">${s.logout.time}</span>` : '<span style="color:#aaa">—</span>';
+
+    // Calculate duration if both exist
+    let duration = '—';
+    if(s.login && s.logout){
+      const [lh,lm,ls] = s.login.time.split(':').map(Number);
+      const [oh,om,os] = s.logout.time.split(':').map(Number);
+      const diffSec = (oh*3600+om*60+os) - (lh*3600+lm*60+ls);
+      if(diffSec > 0){
+        const h = Math.floor(diffSec/3600);
+        const m = Math.floor((diffSec%3600)/60);
+        duration = h>0 ? `${h}h ${m}m` : `${m}m`;
+      }
+    }
+
+    return `<tr>
+      <td style="font-family:'DM Mono',monospace">${dateDisp}</td>
+      <td style="font-family:'DM Mono',monospace">${loginTime}</td>
+      <td style="font-family:'DM Mono',monospace">${logoutTime}</td>
+      <td><strong>${info.display}</strong><br><span class="badge-loc badge-${(info.location||'').replace(/\s/g,'')}" style="margin-top:3px;display:inline-block">${info.location}</span></td>
+      <td style="font-family:'DM Mono',monospace;text-align:center">${duration}</td>
+    </tr>`;
+  }).join('');
+}
+
+// Poll online status every 30 seconds for admin
+let onlineStatusInterval = null;
+
+// ── AUTH ──────────────────────────────────────
+function selectAccount(username, displayName, color){
+  selectedLoginUsername = username;
+  document.querySelectorAll('.account-card').forEach(c=>c.classList.remove('selected'));
+  event.currentTarget.classList.add('selected');
+  const lbl = document.getElementById('selected-account-label');
+  lbl.textContent = displayName; lbl.style.color = color;
+  document.getElementById('login-pass').focus();
+  document.getElementById('login-error').style.display = 'none';
+}
+function doLogin(){
+  const err = document.getElementById('login-error');
+  if(!selectedLoginUsername){ err.textContent='Please select an account first.'; err.style.display='block'; return; }
+  const p = document.getElementById('login-pass').value;
+  const acc = ACCOUNTS[selectedLoginUsername];
+  if(!acc || acc.pass !== p){ err.textContent='Incorrect password. Please try again.'; err.style.display='block'; return; }
+  err.style.display='none';
+  currentUser = { username:selectedLoginUsername, ...acc };
+  document.getElementById('login-screen').classList.remove('show');
+  document.getElementById('login-pass').value='';
+  selectedLoginUsername = null;
+  document.querySelectorAll('.account-card').forEach(c=>c.classList.remove('selected'));
+  const lbl = document.getElementById('selected-account-label');
+  lbl.textContent='select an account above'; lbl.style.color='';
+  applyRole(); navigate('dashboard'); setCurrentDate();
+  if(!CACHE.loaded){ loadAllFromSupabase().then(()=>startRealtime()); }
+  else renderDashboard();
+  // Log login session
+  logSession(currentUser.username, 'login');
+  updateOnlineStatus(currentUser.username, true);
+}
+function doLogout(){
+  if(currentUser){
+    logSession(currentUser.username, 'logout');
+    updateOnlineStatus(currentUser.username, false);
+  }
+  currentUser=null;
+  document.getElementById('login-screen').classList.add('show');
+}
+function applyRole(){
+  document.getElementById('user-display-name').textContent = currentUser.display;
+  document.getElementById('user-avatar').textContent = currentUser.display[0].toUpperCase();
+  document.getElementById('logged-role-badge').textContent = currentUser.role==='admin'?'ADMIN':'STAFF';
+  document.querySelectorAll('.admin-only').forEach(el=>el.style.display=currentUser.role==='admin'?'flex':'none');
+  // Hide delete entry button for staff (admin-only action)
+  document.querySelectorAll('.admin-edit-delete').forEach(el=>el.style.display=currentUser.role==='admin'?'inline-flex':'none');
+  // Switch user — visible for admin only; staff just use Sign Out
+  const sw = document.getElementById('switch-user-wrap');
+  sw.style.display = currentUser.role === 'admin' ? 'block' : 'none';
+  if(currentUser.role === 'admin') buildSwitchUserList();
+}
+function buildSwitchUserList(){
+  const colors = {'admin-suhail':'#c0392b','mr.prosper':'#1a6fba','mr.mokate':'#2e7d52','aq.female':'#9b2c7e','mr.tofik':'#1a8a6e','sr.female':'#b5451b'};
+  const list = document.getElementById('switch-user-list');
+  list.innerHTML = Object.entries(ACCOUNTS).map(([k,acc])=>{
+    const isCurrent = currentUser.username === k;
+    // For staff users: can only switch to admin or same-camp staff
+    const isRestricted = currentUser.role==='staff' && acc.role==='staff' && acc.location !== currentUser.location;
+    return `
+    <div class="switch-user-item ${isCurrent?'current-user':''} ${isRestricted?'su-restricted':''}"
+         onclick="${isRestricted?`showSwitchRestricted('${acc.location}')`:`switchToUser('${k}')`}"
+         style="${isRestricted?'opacity:0.45;cursor:not-allowed':''}"
+         title="${isRestricted?'Restricted — different camp':''}">
+      <div class="su-avatar" style="background:${colors[k]||'#555'}">${acc.display[0]}</div>
+      <div class="su-info">
+        <strong>${acc.display}</strong>
+        <small>${acc.role==='admin'?'Admin':'Staff — '+acc.location}</small>
+      </div>
+      ${isCurrent?'<span style="margin-left:auto;font-size:10px;color:var(--text-muted)">● Now</span>':''}
+      ${isRestricted?'<span style="margin-left:auto;font-size:10px;color:#c0392b">🔒</span>':''}
+    </div>`;
+  }).join('');
+}
+function showSwitchRestricted(targetLoc){
+  alert(`🔒 Access Restricted\n\nYou cannot switch to a different camp's Berkeley staff.\nYour camp: ${currentUser.location} → Target: ${targetLoc}\n\nOnly Admin can switch between different camp accounts.`);
+  document.getElementById('switch-user-dropdown').classList.remove('open');
+}
+function toggleSwitchDropdown(){
+  document.getElementById('switch-user-dropdown').classList.toggle('open');
+}
+function switchToUser(username){
+  const acc = ACCOUNTS[username];
+  if(!acc) return;
+  // Restriction: a Berkeley staff (role=staff) cannot switch to another camp's staff
+  if(currentUser && currentUser.role === 'staff' && acc.role === 'staff' && acc.location !== currentUser.location){
+    showSwitchRestricted(acc.location);
+    return;
+  }
+  currentUser = { username, ...acc };
+  document.getElementById('switch-user-dropdown').classList.remove('open');
+  applyRole();
+  navigate('dashboard');
+  renderDashboard();
+}
+
+// ── NAVIGATION ────────────────────────────────
+const PAGE_TITLES = { dashboard:'Dashboard','daily-entry':'Union Daily Entry',report:'Report / Statement of Pieces Daily & Monthly','union-staff':'Union Staff',pieces:'Pieces Daily & Monthly',uniforms:'Uniforms Management',settings:'Settings' };
+function navigate(page){
+  if(['uniforms','settings'].includes(page)&&currentUser?.role!=='admin') return;
+  // redirect 'pieces' to 'report' monthly tab
+  if(page==='pieces'){ navigate('report'); switchReportTab('monthly', document.getElementById('rtab-btn-monthly')); return; }
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  const nav=document.getElementById('nav-'+page); if(nav) nav.classList.add('active');
+  document.getElementById('page-title').textContent = PAGE_TITLES[page]||page;
+  if(page==='daily-entry') initDailyEntry();
+  if(page==='report'){ renderReport(); initPiecesPage(); renderPieces(); }
+  if(page==='uniforms') renderUniformsGrid();
+  if(page==='dashboard') renderDashboard();
+  if(page==='settings') renderBerkeleyStaffGrid();
+  if(page==='union-staff') renderUnionStaff();
+}
+
+let activeReportTab = 'daily';
+function switchReportTab(tab, el){
+  activeReportTab = tab;
+  document.querySelectorAll('#page-report .stab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('#page-report .stab-panel').forEach(p=>p.classList.remove('active'));
+  if(el) el.classList.add('active');
+  document.getElementById('rtab-'+tab).classList.add('active');
+  if(tab==='monthly'){ initPiecesPage(); renderPieces(); }
+  else renderReport();
+}
+function switchTab(tab, el){
+  document.querySelectorAll('.stab').forEach(t=>t.classList.remove('active'));
+  document.querySelectorAll('.stab-panel').forEach(p=>p.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('stab-'+tab).classList.add('active');
+}
+
+// ── CAMP FILTER ───────────────────────────────
+let activeCampFilter = '';
+function setCampFilter(loc){
+  // Staff can only view their own camp
+  if(currentUser?.role==='staff' && loc && loc !== currentUser.location) return;
+  activeCampFilter = loc;
+  document.querySelectorAll('.camp-filter-btn').forEach(b => b.classList.remove('active'));
+  const btnId = loc ? 'cfbtn-'+loc : 'cfbtn-all';
+  const btn = document.getElementById(btnId);
+  if(btn) btn.classList.add('active');
+  const lbl = document.getElementById('camp-filter-label');
+  if(lbl) lbl.textContent = loc ? `Showing: ${loc}` : 'Showing all camps';
+  renderDashboard();
+}
+
+// ── DASHBOARD ─────────────────────────────────
+function renderDashboard(){
+  const entries=DB.entries, today=new Date().toISOString().split('T')[0];
+
+  // For stats: use user's location filter for staff
+  const myLoc = currentUser?.role==='staff' ? currentUser.location : '';
+  const relevantEntries = myLoc ? entries.filter(e=>e.location===myLoc) : entries;
+
+  const todayE=relevantEntries.filter(e=>e.date===today);
+  const tToday=todayE.reduce((s,e)=>s+(parseInt(e.grandTotal)||0),0);
+  const tAll=relevantEntries.reduce((s,e)=>s+(parseInt(e.grandTotal)||0),0);
+  const locs=[...new Set(relevantEntries.map(e=>e.location))].length;
+  document.getElementById('stat-grid').innerHTML=`
+    <div class="stat-card accent-card"><div class="label">Total Items All Time</div><div class="value">${tAll}</div><div class="sub">Across ${relevantEntries.length} submissions</div></div>
+    <div class="stat-card"><div class="label">Items Today</div><div class="value">${tToday}</div><div class="sub">${todayE.length} submissions today</div></div>
+    <div class="stat-card"><div class="label">Total Submissions</div><div class="value">${relevantEntries.length}</div><div class="sub">${myLoc?myLoc+' only':'All time'}</div></div>
+    <div class="stat-card"><div class="label">Active Locations</div><div class="value">${locs}</div><div class="sub">Camp locations used</div></div>`;
+
+  // Apply camp filter for table display
+  const campLoc = myLoc || activeCampFilter;
+  let displayEntries = campLoc ? entries.filter(e=>e.location===campLoc) : entries;
+  const recent = displayEntries.slice(-15).reverse();
+
+  // Show/hide camp filter buttons based on role
+  const filterBar = document.getElementById('camp-filter-bar');
+  if(filterBar){
+    if(currentUser?.role==='staff'){
+      // Staff: only show their camp button, hide others
+      ['AQ-M1','AQ-M2','AQ-F','SR-M','SR-F'].forEach(l=>{
+        const b=document.getElementById('cfbtn-'+l);
+        if(b) b.style.display = (l===currentUser.location)?'inline-flex':'none';
+      });
+      const allBtn=document.getElementById('cfbtn-all');
+      if(allBtn) allBtn.style.display='none';
+    } else {
+      ['AQ-M1','AQ-M2','AQ-F','SR-M','SR-F'].forEach(l=>{
+        const b=document.getElementById('cfbtn-'+l);
+        if(b) b.style.display='inline-flex';
+      });
+      const allBtn=document.getElementById('cfbtn-all');
+      if(allBtn) allBtn.style.display='inline-flex';
+    }
+  }
+
+  document.getElementById('recent-tbody').innerHTML=recent.map(e=>{
+    const canEdit = currentUser?.role==='admin' || currentUser?.location===e.location;
+    return `<tr class="${!canEdit?'lock-row':''}">
+      <td style="font-family:'DM Mono',monospace">${fmtDate(e.date)}</td>
+      <td style="font-family:'DM Mono',monospace;font-size:12px;color:var(--text-muted)">${e.time ? fmtTime(e.time) : '—'}</td>
+      <td>${e.unionStaff}</td>
+      <td><span class="badge-loc badge-${e.location.replace(/\s/g,'')}">${e.location}</span></td>
+      <td>${e.berkeleyStaff||'—'}</td>
+      <td style="font-family:'DM Mono',monospace;font-weight:700">${e.grandTotal}</td>
+      <td style="text-align:center">${canEdit
+        ? `<span style="display:inline-flex;gap:4px">
+            <button class="btn btn-outline btn-sm" onclick="openEditEntry('${e.id}')" title="Edit entry">✏️</button>
+            ${currentUser?.role==='admin' ? `<button class="btn btn-danger btn-sm" onclick="quickDeleteEntry('${e.id}')" title="Delete entry">🗑️</button>` : ''}
+           </span>`
+        : `<span class="lock-badge">🔒</span>`
+      }</td>
+    </tr>`;
+  }).join('')||'<tr><td colspan="7" style="text-align:center;color:var(--text-muted);padding:24px">No entries yet.</td></tr>';
+}
+
+// ── DAILY ENTRY ───────────────────────────────
+function getLocationStaff(loc){ const s=DB.berkeleyStaff.find(x=>x.location===loc); return s?s.name:''; }
+function initDailyEntry(){
+  document.getElementById('entry-date').value=new Date().toISOString().split('T')[0];
+  if(currentUser?.role==='staff'){
+    const loc=currentUser.location;
+    const sel=document.getElementById('entry-location'); sel.value=loc||''; sel.disabled=true;
+    document.getElementById('entry-berkeley-staff').value=getLocationStaff(loc);
+  } else {
+    document.getElementById('entry-location').disabled=false;
+    document.getElementById('entry-location').value='';
+    document.getElementById('entry-berkeley-staff').value='';
+  }
+  renderItemsTable();
+}
+function onLocationChange(){
+  document.getElementById('entry-berkeley-staff').value=getLocationStaff(document.getElementById('entry-location').value);
+}
+function renderItemsTable(){
+  document.getElementById('items-tbody').innerHTML=DB.uniforms.map((item,i)=>`
+    <tr>
+      <td style="color:var(--text-muted);font-family:'DM Mono',monospace;font-size:12px">${String(i+1).padStart(2,'0')}</td>
+      <td><strong>${item}</strong></td>
+      <td style="text-align:center"><input class="qty-input" type="number" min="0" placeholder="" data-idx="${i}" oninput="updateTotals()" /></td>
+      <td class="row-total" id="row-total-${i}"></td>
+    </tr>`).join('');
+  updateTotals();
+}
+function updateTotals(){
+  let grand=0;
+  document.querySelectorAll('.qty-input').forEach(inp=>{ const v=parseInt(inp.value)||0; document.getElementById('row-total-'+inp.dataset.idx).textContent=v>0?v:''; grand+=v; });
+  document.getElementById('grand-total').textContent=grand||0;
+}
+// ── MONTHLY LIMIT HELPERS ─────────────────────
+const MONTHLY_LIMIT = 32;
+const MONTHLY_WARN  = 28;
+
+function getMonthlyTotal(unionStaff, location, yearMonth, excludeId){
+  // yearMonth = 'YYYY-MM'
+  return DB.entries
+    .filter(e => e.unionStaff === unionStaff && e.location === location
+      && e.date && e.date.startsWith(yearMonth)
+      && (excludeId === undefined || String(e.id) !== String(excludeId)))
+    .reduce((s,e)=>s+e.grandTotal, 0);
+}
+
+function checkMonthlyLimit(unionStaff, location, date, newQty, excludeId){
+  const yearMonth = date.substring(0,7); // 'YYYY-MM'
+  const existing  = getMonthlyTotal(unionStaff, location, yearMonth, excludeId);
+  const total     = existing + newQty;
+  if(total > MONTHLY_LIMIT) return { blocked:true, total, existing };
+  if(total >= MONTHLY_WARN)  return { warn:true,    total, existing };
+  return { ok:true, total, existing };
+}
+
+// ── DUPLICATE ENTRY CHECK ─────────────────────
+function checkDuplicateEntry(unionStaff, location, date, excludeId){
+  return DB.entries.find(e =>
+    e.unionStaff === unionStaff &&
+    e.location   === location   &&
+    e.date       === date       &&
+    (excludeId === undefined || String(e.id) !== String(excludeId))
+  ) || null;
+}
+
+function fmtTime(timeStr){
+  if(!timeStr) return '—';
+  // timeStr is "HH:MM" 24h
+  const [h, m] = timeStr.split(':').map(Number);
+  const ampm = h >= 12 ? 'PM' : 'AM';
+  const h12 = h % 12 || 12;
+  return `${h12}:${String(m).padStart(2,'0')} ${ampm}`;
+}
+
+function showDuplicateModal(existingEntry){
+  window._dupEntryId = existingEntry.id;
+  document.getElementById('dup-staff-name').textContent = existingEntry.unionStaff;
+  document.getElementById('dup-location').textContent   = existingEntry.location;
+  document.getElementById('dup-date').textContent       = fmtDate(existingEntry.date);
+  document.getElementById('dup-time').textContent       = existingEntry.time ? fmtTime(existingEntry.time) : '(time not recorded)';
+  document.getElementById('dup-total').textContent      = existingEntry.grandTotal + ' pieces';
+  // Show items breakdown
+  const itemBadges = Object.entries(existingEntry.items||{})
+    .filter(([,v])=>v>0)
+    .map(([k,v])=>`<span class="dup-item-badge">${k}: ${v}</span>`)
+    .join('');
+  document.getElementById('dup-items-list').innerHTML = itemBadges || '<span style="font-size:12px;color:var(--text-muted)">No items recorded</span>';
+  document.getElementById('duplicate-modal').classList.add('open');
+}
+
+function closeDuplicateModal(){
+  document.getElementById('duplicate-modal').classList.remove('open');
+}
+
+function saveEntry(){
+  const date=document.getElementById('entry-date').value;
+  const loc=document.getElementById('entry-location').value;
+  const bs=document.getElementById('entry-berkeley-staff').value;
+  const us=document.getElementById('entry-union-staff').value.trim();
+  if(!date||!loc||!us){ alert('Please fill in Date, Location, and Union Staff Name.'); return; }
+
+  // ── WRONG CAMP CHECK (for Berkeley staff only) ─────────────
+  if(currentUser?.role === 'staff'){
+    const staffLoc = getUnionStaffCampLocation(us);
+    if(staffLoc && staffLoc !== loc){
+      // Show wrong-camp popup; save will be triggered by confirmWrongCampAndSave
+      window._pendingSaveEntry = true;
+      showWrongCampModal(us, staffLoc, loc);
+      return;
+    }
+  }
+  _doSaveEntry();
+}
+
+async function _doSaveEntry(){
+  const date=document.getElementById('entry-date').value;
+  const loc=document.getElementById('entry-location').value;
+  const bs=document.getElementById('entry-berkeley-staff').value;
+  const us=document.getElementById('entry-union-staff').value.trim();
+  if(!date||!loc||!us){ alert('Please fill in Date, Location, and Union Staff Name.'); return; }
+  const uniforms=DB.uniforms; const items={}; let grand=0;
+  document.querySelectorAll('.qty-input').forEach(inp=>{ const v=parseInt(inp.value)||0; items[uniforms[inp.dataset.idx]]=v; grand+=v; });
+  if(grand===0){ alert('Please enter at least one item quantity to save.'); return; }
+
+  // ── DUPLICATE CHECK ──────────────────────────
+  const duplicate = checkDuplicateEntry(us, loc, date);
+  if(duplicate){ showDuplicateModal(duplicate); return; }
+
+  const limitCheck = checkMonthlyLimit(us, loc, date, grand);
+  if(limitCheck.blocked){
+    alert(`🚫 LIMIT EXCEEDED!\n\n${us} at ${loc} has already submitted ${limitCheck.existing} pieces this month.\nAdding ${grand} more would reach ${limitCheck.total} pieces, exceeding the 32-piece monthly limit.\n\nThis entry cannot be saved.`);
+    return;
+  }
+
+  const now = new Date();
+  const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  const tempId = 'tmp_' + Date.now();
+  const newEntry = {id:tempId,date,time:timeStr,location:loc,berkeleyStaff:bs,unionStaff:us,items,grandTotal:grand};
+  CACHE.entries.push(newEntry);
+  const names=DB.unionNames; if(!names.includes(us)){ names.push(us); DB.unionNames=names; }
+
+  if(limitCheck.warn){
+    setTimeout(()=>alert(`⚠️ WARNING — Monthly Limit Alert!\n\n${us} at ${loc} has now reached ${limitCheck.total} pieces this month.\nThe monthly limit is 32 pieces. Please advise this Union Staff member accordingly.`), 200);
+  }
+
+  document.getElementById('entry-success').style.display='block';
+  setTimeout(()=>document.getElementById('entry-success').style.display='none',3000);
+  clearEntryForm();
+  renderDashboard();
+
+  // Persist to Supabase in background
+  try {
+    showLoader('Saving entry…');
+    await saveEntryToSupabase(newEntry);
+    hideLoader();
+    showSyncBadge();
+    renderDashboard(); // re-render so edit buttons use real DB id instead of tmp_ id
+  } catch(err){
+    hideLoader();
+    const is401 = err.message.includes('401') || err.message.includes('42501') || err.message.includes('row-level security');
+    const msg = is401
+      ? '⚠️ Save failed (401 Permission Error): Your Supabase API key is wrong. Go to Supabase Dashboard → Project Settings → API → copy the "anon public" key (starts with eyJ...) and replace SUPA_KEY in the code.'
+      : '⚠️ Save failed — entry is in memory but not synced: ' + err.message;
+    showDbError(msg);
+  }
+}
+function clearEntryForm(){
+  document.getElementById('entry-union-staff').value='';
+  document.getElementById('union-staff-accom-badge').style.display='none';
+  document.querySelectorAll('.qty-input').forEach(i=>i.value='');
+  updateTotals();
+}
+function onUnionStaffInput(){
+  const val=document.getElementById('entry-union-staff').value.toLowerCase();
+  const list=document.getElementById('autocomplete-list');
+  const names=DB.unionNames.filter(n=>n.toLowerCase().includes(val));
+  if(!val||!names.length){ list.style.display='none'; document.getElementById('union-staff-accom-badge').style.display='none'; return; }
+  list.innerHTML=names.map(n=>`<div class="autocomplete-item" onclick="selectName(this.textContent.trim())">${n}</div>`).join('');
+  list.style.display='block';
+  // Silently show accommodation badge if exact match found
+  const exactMatch = names.find(n=>n.toLowerCase()===val);
+  if(exactMatch) showUnionStaffAccommodation(true);
+  else document.getElementById('union-staff-accom-badge').style.display='none';
+}
+function selectName(n){
+  document.getElementById('entry-union-staff').value=n;
+  document.getElementById('autocomplete-list').style.display='none';
+  // Auto-show accommodation on name select
+  showUnionStaffAccommodation(true);
+}
+
+// ── UNION STAFF ACCOMMODATION ─────────────────
+function getUnionStaffCampLocation(name){
+  // Returns the most-used location for this union staff from past entries
+  if(!name) return null;
+  const staffEntries = DB.entries.filter(e => e.unionStaff && e.unionStaff.toLowerCase() === name.toLowerCase());
+  if(!staffEntries.length) return null;
+  // Count by location, return the most frequent
+  const counts = {};
+  staffEntries.forEach(e => { counts[e.location] = (counts[e.location]||0) + 1; });
+  return Object.entries(counts).sort((a,b)=>b[1]-a[1])[0][0];
+}
+
+function showUnionStaffAccommodation(silent){
+  const name = document.getElementById('entry-union-staff').value.trim();
+  const badge = document.getElementById('union-staff-accom-badge');
+  const badgeText = document.getElementById('union-staff-accom-text');
+
+  if(!name){
+    badge.style.display='none';
+    if(!silent) alert('Please enter a Union Staff Name first.');
+    return;
+  }
+
+  const staffLoc = getUnionStaffCampLocation(name);
+  const currentLoc = document.getElementById('entry-location').value;
+
+  if(!staffLoc){
+    badge.style.display='none';
+    if(!silent) alert(`No previous records found for "${name}". This may be a new staff member.`);
+    return;
+  }
+
+  // Show the accommodation badge
+  badge.style.display='block';
+  badgeText.textContent = `${name}'s accommodation: ${staffLoc}`;
+  badge.style.background = staffLoc === currentLoc ? '#ecfdf5' : '#fffbea';
+  badge.style.borderColor = staffLoc === currentLoc ? '#6ee7b7' : '#ffc107';
+  badge.style.color = staffLoc === currentLoc ? '#065f46' : '#92400e';
+
+  // If Berkeley staff is logged in and the union staff belongs to a different camp — show warning popup
+  // (only if called from button press, not silently from autocomplete, to avoid interrupting typing)
+  if(!silent && currentLoc && staffLoc !== currentLoc && currentUser?.role === 'staff'){
+    showWrongCampModal(name, staffLoc, currentLoc);
+  }
+}
+
+// Called on input (typing) — shows badge silently without popup
+function onUnionStaffInputCheckCamp(){
+  const name = document.getElementById('entry-union-staff').value.trim();
+  if(name.length >= 2) showUnionStaffAccommodation(true);
+  else {
+    document.getElementById('union-staff-accom-badge').style.display='none';
+  }
+}
+
+let _wrongCampProceed = false;
+function showWrongCampModal(name, staffLoc, currentLoc){
+  document.getElementById('wrong-camp-info-box').innerHTML =
+    `<strong>Union Staff:</strong> ${name}<br>
+     <strong>Their Accommodation Camp:</strong> <span style="color:#c0392b;font-weight:700">${staffLoc}</span><br>
+     <strong>Your Current Camp:</strong> <span style="color:var(--success);font-weight:700">${currentLoc}</span><br><br>
+     The name you have entered does not belong to this camp.`;
+  document.getElementById('wrong-camp-modal').classList.add('open');
+}
+function closeWrongCampModal(){
+  document.getElementById('wrong-camp-modal').classList.remove('open');
+  window._pendingSaveEntry = false;
+  // Focus back on the name field so user can change it
+  document.getElementById('entry-union-staff').focus();
+  document.getElementById('entry-union-staff').select();
+  document.getElementById('union-staff-accom-badge').style.display='none';
+}
+function confirmWrongCampEntry(){
+  document.getElementById('wrong-camp-modal').classList.remove('open');
+  // If triggered from a save attempt, proceed with save
+  if(window._pendingSaveEntry){
+    window._pendingSaveEntry = false;
+    _doSaveEntry();
+  }
+  // Otherwise user just confirmed via the button — keep the name as-is
+}
+document.addEventListener('click',e=>{ if(!e.target.closest('.autocomplete-wrapper')) { document.getElementById('autocomplete-list').style.display='none'; const pl=document.getElementById('pieces-autocomplete-list'); if(pl) pl.style.display='none'; } if(!e.target.closest('.switch-user-wrap')) document.getElementById('switch-user-dropdown')?.classList.remove('open'); });
+
+// ── REPORT ────────────────────────────────────
+function getFilteredEntries(){
+  let e=DB.entries;
+  const from=document.getElementById('filter-date-from').value;
+  const to=document.getElementById('filter-date-to').value;
+  const loc=document.getElementById('filter-location').value;
+  if(from) e=e.filter(x=>x.date>=from);
+  if(to)   e=e.filter(x=>x.date<=to);
+  if(loc)  e=e.filter(x=>x.location===loc);
+  return e;
+}
+function fmtDate(dateStr){
+  if(!dateStr) return '';
+  const [y,m,d] = dateStr.split('-');
+  if(!y||!m||!d) return dateStr;
+  const yy = y.slice(-2);
+  return `${d}/${m}/${yy}`;
+}
+function renderReport(){
+  const uniforms=DB.uniforms; const entries=getFilteredEntries();
+  document.getElementById('report-count').textContent=`${entries.length} record${entries.length!==1?'s':''}`;
+  // Show location and Berkeley staff info on top (once)
+  const locEl = document.getElementById('report-location-info');
+  const locFilter = document.getElementById('filter-location').value;
+  const locNames = locFilter ? [locFilter] : [...new Set(entries.map(e=>e.location))].filter(Boolean);
+  const bsNames = [...new Set(entries.map(e=>e.berkeleyStaff).filter(Boolean))];
+  if(locEl) {
+    locEl.innerHTML = locNames.length
+      ? `<span style="font-size:13px;color:var(--text-muted)">📍 <strong>Location${locNames.length>1?'s':''}:</strong> ${locNames.join(', ')}&nbsp;&nbsp;|&nbsp;&nbsp;👤 <strong>Berkeley Staff:</strong> ${bsNames.length?bsNames.join(', '):'—'}</span>`
+      : '';
+  }
+  // Table: no Location or Berkeley Staff columns
+  const isAdmin = currentUser?.role==='admin';
+  document.getElementById('report-thead-row').innerHTML=`<th>Date</th><th>Union Staff</th>${uniforms.map(u=>`<th>${u}</th>`).join('')}<th>Total Qty</th>${isAdmin?'<th></th>':''}`;
+  document.getElementById('report-tbody').innerHTML=entries.length?entries.map(e=>`
+    <tr><td style="font-family:'DM Mono',monospace">${fmtDate(e.date)}</td><td>${e.unionStaff}</td>
+    ${uniforms.map(u=>`<td style="font-family:'DM Mono',monospace">${e.items[u]||0}</td>`).join('')}
+    <td style="font-family:'DM Mono',monospace;font-weight:700">${e.grandTotal}</td>
+    ${isAdmin?`<td style="text-align:center"><button class="btn btn-danger btn-sm" onclick="quickDeleteEntry('${e.id}')" title="Delete">🗑️</button></td>`:''}</tr>`).join('')
+    :`<tr><td colspan="${3+uniforms.length+(isAdmin?1:0)}" style="text-align:center;color:var(--text-muted);padding:28px">No records found.</td></tr>`;
+  const colTotals=uniforms.map(u=>entries.reduce((s,e)=>s+(e.items[u]||0),0));
+  const gt=entries.reduce((s,e)=>s+e.grandTotal,0);
+  document.getElementById('report-tfoot-row').innerHTML=`<td colspan="2">TOTALS</td>${colTotals.map(t=>`<td>${t}</td>`).join('')}<td>${gt}</td>${isAdmin?'<td></td>':''}`;
+}
+function clearReportFilters(){ ['filter-date-from','filter-date-to'].forEach(id=>document.getElementById(id).value=''); document.getElementById('filter-location').value=''; renderReport(); }
+
+// ── UNIFORMS ──────────────────────────────────
+function renderUniformsGrid(){
+  document.getElementById('uniforms-grid').innerHTML=DB.uniforms.map((u,i)=>`
+    <div class="item-card">
+      <div class="info"><div class="name">👕 ${u}</div></div>
+      <div class="actions">
+        <button class="btn btn-outline btn-sm" onclick="openEditUniform(${i})">✏️</button>
+        <button class="btn btn-danger btn-sm" onclick="deleteUniform(${i})">🗑</button>
+      </div>
+    </div>`).join('');
+}
+function openAddUniform(){ editingUniformIndex=null; document.getElementById('modal-uniform-title').textContent='Add Uniform Item'; document.getElementById('modal-item-name').value=''; document.getElementById('uniform-modal').classList.add('open'); setTimeout(()=>document.getElementById('modal-item-name').focus(),100); }
+function openEditUniform(i){ editingUniformIndex=i; document.getElementById('modal-uniform-title').textContent='Edit Uniform Item'; document.getElementById('modal-item-name').value=DB.uniforms[i]; document.getElementById('uniform-modal').classList.add('open'); setTimeout(()=>document.getElementById('modal-item-name').focus(),100); }
+async function saveUniform(){
+  const name=document.getElementById('modal-item-name').value.trim(); if(!name) return;
+  const u=DB.uniforms; if(editingUniformIndex!==null) u[editingUniformIndex]=name; else u.push(name);
+  DB.uniforms=u; closeAllModals(); renderUniformsGrid();
+  try { await saveUniformsToSupabase(u); showSyncBadge(); } catch(err){ showDbError('⚠️ Uniform not synced: '+err.message); }
+}
+async function deleteUniform(i){ if(!confirm('Delete this item?')) return; const u=DB.uniforms; u.splice(i,1); DB.uniforms=u; renderUniformsGrid(); try { await saveUniformsToSupabase(u); showSyncBadge(); } catch(err){ showDbError('⚠️ Uniform delete not synced: '+err.message); } }
+
+// ── BERKELEY STAFF ────────────────────────────
+function renderBerkeleyStaffGrid(){
+  const staff=DB.berkeleyStaff;
+  document.getElementById('berkeley-staff-grid').innerHTML=staff.length?staff.map(s=>`
+    <div class="item-card" id="staff-card-${s.id}">
+      <div class="info">
+        <div class="name">&#128100; ${s.name}</div>
+        <div class="sub">${s.location||'All Locations'}</div>
+      </div>
+      <div class="actions">
+        <button class="btn btn-outline btn-sm" onclick="openEditStaff(${s.id})" style="width:100%;justify-content:center">&#9999;&#65039; Edit</button>
+      </div>
+    </div>`).join(''):'<p style="color:var(--text-muted);font-size:14px">No Berkeley staff added yet.</p>';
+}
+function openAddStaff(){ editingStaffId=null; document.getElementById('modal-staff-title').textContent='Add Berkeley Staff'; document.getElementById('modal-staff-name').value=''; document.getElementById('modal-staff-location').value=''; document.getElementById('staff-modal').classList.add('open'); setTimeout(()=>document.getElementById('modal-staff-name').focus(),100); }
+function openEditStaff(id){
+  editingStaffId=id; const s=DB.berkeleyStaff.find(x=>x.id===id); if(!s) return;
+  document.getElementById('modal-staff-title').textContent='Edit Berkeley Staff';
+  document.getElementById('modal-staff-name').value=s.name;
+  document.getElementById('modal-staff-location').value=s.location||'';
+  document.getElementById('staff-modal').classList.add('open');
+}
+async function saveStaff(){
+  const name=document.getElementById('modal-staff-name').value.trim();
+  const location=document.getElementById('modal-staff-location').value;
+  if(!name){ alert('Please enter a staff name.'); return; }
+  const staff=DB.berkeleyStaff;
+  let staffObj;
+  if(editingStaffId!==null){ const idx=staff.findIndex(s=>s.id===editingStaffId); if(idx>-1){ staff[idx].name=name; staff[idx].location=location; staffObj=staff[idx]; } }
+  else { const newId=staff.length?Math.max(...staff.map(s=>s.id))+1:1; staffObj={id:newId,name,location}; staff.push(staffObj); }
+  DB.berkeleyStaff=staff; closeAllModals(); renderBerkeleyStaffGrid();
+  showAlert('settings-alert','✅ Berkeley staff saved successfully!','alert-success');
+  try { await saveBerkeleyStaffToSupabase(staffObj); showSyncBadge(); } catch(err){ showDbError('⚠️ Staff not synced: '+err.message); }
+}
+function deleteStaff(id){
+  if(!confirm('Remove this staff member?')) return;
+  DB.berkeleyStaff=DB.berkeleyStaff.filter(s=>s.id!==id);
+  renderBerkeleyStaffGrid();
+  showAlert('settings-alert','🗑 Staff member removed.','alert-info');
+}
+
+// ── IMPORT / EXPORT ───────────────────────────
+function exportAllJSON(){
+  dl(JSON.stringify({entries:DB.entries,uniforms:DB.uniforms,berkeleyStaff:DB.berkeleyStaff,unionNames:DB.unionNames,exportedAt:new Date().toISOString()},null,2),`laundry_backup_${td()}.json`,'application/json');
+}
+function exportAllCSV(){ exportEntriesCSV(DB.entries,`laundry_full_export_${td()}.csv`); }
+function exportReportCSV(){ exportEntriesCSV(getFilteredEntries(),`laundry_report_${td()}.csv`); }
+function exportReportJSON(){ dl(JSON.stringify(getFilteredEntries(),null,2),`laundry_entries_${td()}.json`,'application/json'); }
+function exportEntriesCSV(entries, filename){
+  const u=DB.uniforms;
+  const hdrs=['Date','Union Staff','Location','Berkeley Staff',...u,'Total Qty'];
+  const rows=entries.map(e=>[e.date,e.unionStaff,e.location,e.berkeleyStaff||'',...u.map(x=>e.items[x]||0),e.grandTotal]);
+  dl([hdrs,...rows].map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('\n'),filename,'text/csv');
+}
+function importJSON(input){
+  const file=input.files[0]; if(!file) return;
+  const r=new FileReader(); r.onload=async e=>{
+    try{
+      const data=JSON.parse(e.target.result); let count=0;
+      if(data.entries){
+        const ids=new Set(CACHE.entries.map(x=>String(x.id)));
+        const nw=data.entries.filter(x=>!ids.has(String(x.id)));
+        showLoader('Importing entries…');
+        for(const entry of nw){
+          try { await saveEntryToSupabase(entry); count++; } catch(e2){}
+        }
+        hideLoader();
+      }
+      if(data.uniforms){ DB.uniforms=data.uniforms; try{await saveUniformsToSupabase(data.uniforms);}catch(e){} }
+      if(data.berkeleyStaff){ DB.berkeleyStaff=data.berkeleyStaff; for(const s of data.berkeleyStaff){ try{await saveBerkeleyStaffToSupabase(s);}catch(e){} } }
+      if(data.unionNames){const n=new Set([...DB.unionNames,...data.unionNames]);DB.unionNames=[...n];}
+      showAlert('import-alert',`✅ Import successful! ${count} new entries added.`,'alert-success');
+      renderBerkeleyStaffGrid();
+    } catch(err){ hideLoader(); showAlert('import-alert','❌ Invalid JSON file. Use a file exported from this system.','alert-error'); }
+    input.value='';
+  }; r.readAsText(file);
+}
+function importCSV(input){
+  const file=input.files[0]; if(!file) return;
+  const r=new FileReader(); r.onload=async e=>{
+    try{
+      const lines=e.target.result.trim().split('\n'); if(lines.length<2){showAlert('import-alert','❌ CSV has no data rows.','alert-error');return;}
+      const headers=csvParse(lines[0]); const uniforms=DB.uniforms;
+      const nw=[]; let count=0;
+      for(let i=1;i<lines.length;i++){
+        const cols=csvParse(lines[i]); if(cols.length<4) continue;
+        const items={}; uniforms.forEach(u=>{const ci=headers.indexOf(u);if(ci>-1)items[u]=parseInt(cols[ci])||0;});
+        nw.push({id:'tmp_'+Date.now()+'_'+i,date:cols[0],location:cols[2],berkeleyStaff:cols[3],unionStaff:cols[1],items,grandTotal:Object.values(items).reduce((s,v)=>s+v,0)});
+        count++;
+      }
+      showLoader('Importing CSV entries…');
+      for(const entry of nw){ try{await saveEntryToSupabase(entry);}catch(e){} }
+      hideLoader();
+      showAlert('import-alert',`✅ CSV imported! ${count} entries added.`,'alert-success');
+    } catch(err){ hideLoader(); showAlert('import-alert','❌ Could not parse CSV. Check column headers match exported format.','alert-error'); }
+    input.value='';
+  }; r.readAsText(file);
+}
+function csvParse(line){ const res=[]; let cur='',inQ=false; for(let i=0;i<line.length;i++){ const c=line[i]; if(c==='"'){ if(inQ&&line[i+1]==='"'){cur+='"';i++;}else inQ=!inQ; } else if(c===','&&!inQ){res.push(cur.trim());cur='';}else cur+=c; } res.push(cur.trim()); return res; }
+function dl(content,filename,mime){ const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([content],{type:mime})); a.download=filename; document.body.appendChild(a); a.click(); document.body.removeChild(a); }
+function td(){ return new Date().toISOString().split('T')[0]; }
+function showAlert(id,msg,cls){ const el=document.getElementById(id); el.textContent=msg; el.className='alert '+cls; el.style.display='block'; setTimeout(()=>el.style.display='none',4000); }
+
+// ── MODALS ────────────────────────────────────
+function closeAllModals(){ document.querySelectorAll('.modal-overlay').forEach(m=>m.classList.remove('open')); }
+document.querySelectorAll('.modal-overlay').forEach(m=>m.addEventListener('click',e=>{if(e.target===m)closeAllModals();}));
+
+// ── PASSWORDS ─────────────────────────────────
+function onPwdAccountChange(){
+  const sel = document.getElementById('pwd-account-select').value;
+  const disp = document.getElementById('pwd-current-display');
+  if(sel && ACCOUNTS[sel]) disp.value = ACCOUNTS[sel].pass;
+  else disp.value = '';
+  document.getElementById('pwd-new').value = '';
+  document.getElementById('pwd-confirm').value = '';
+}
+function savePassword(){
+  const sel = document.getElementById('pwd-account-select').value;
+  const np = document.getElementById('pwd-new').value;
+  const cp = document.getElementById('pwd-confirm').value;
+  if(!sel){ showAlert('pwd-alert','⚠️ Please select an account.','alert-error'); return; }
+  if(!np){ showAlert('pwd-alert','⚠️ Please enter a new password.','alert-error'); return; }
+  if(np !== cp){ showAlert('pwd-alert','❌ Passwords do not match.','alert-error'); return; }
+  if(np.length < 4){ showAlert('pwd-alert','⚠️ Password must be at least 4 characters.','alert-error'); return; }
+  ACCOUNTS[sel].pass = np;
+  document.getElementById('pwd-current-display').value = np;
+  document.getElementById('pwd-new').value = '';
+  document.getElementById('pwd-confirm').value = '';
+  showAlert('pwd-alert',`✅ Password updated for ${ACCOUNTS[sel].display}.`,'alert-success');
+}
+function clearPwdForm(){
+  document.getElementById('pwd-account-select').value='';
+  document.getElementById('pwd-current-display').value='';
+  document.getElementById('pwd-new').value='';
+  document.getElementById('pwd-confirm').value='';
+}
+
+// ── PRINT PREVIEW ─────────────────────────
+function onPrintModeChange(){
+  const mode = document.querySelector('input[name="print-view-mode"]:checked')?.value || 'staff';
+  const isTotals = mode === 'totals';
+  document.getElementById('popt-columns-section').style.opacity = isTotals ? '0.4' : '1';
+  document.getElementById('popt-columns-section').style.pointerEvents = isTotals ? 'none' : 'auto';
+  document.getElementById('popt-selectall-section').style.opacity = isTotals ? '0.4' : '1';
+  document.getElementById('popt-selectall-section').style.pointerEvents = isTotals ? 'none' : 'auto';
+  // highlight selected radio label
+  document.getElementById('pmode-staff-label').style.borderColor = isTotals ? 'var(--border)' : 'var(--primary)';
+  document.getElementById('pmode-staff-label').style.background  = isTotals ? '' : '#f0f5ff';
+  document.getElementById('pmode-totals-label').style.borderColor = isTotals ? 'var(--primary)' : 'var(--border)';
+  document.getElementById('pmode-totals-label').style.background  = isTotals ? '#f0f5ff' : '';
+}
+
+function openPrintOptions(){
+  // Build item checkboxes dynamically
+  const uniforms = DB.uniforms;
+  const list = document.getElementById('popt-items-list');
+  list.innerHTML = uniforms.map((u,i)=>
+    `<label class="print-opt-check"><input type="checkbox" class="popt-item" data-idx="${i}" checked> ${u}</label>`
+  ).join('');
+  // reset mode to staff
+  document.getElementById('pmode-staff').checked = true;
+  onPrintModeChange();
+  document.getElementById('print-options-modal').classList.add('open');
+}
+
+function setPrintItemsAll(val){
+  document.querySelectorAll('.popt-item').forEach(cb => cb.checked = val);
+}
+
+function applyPrintOptions(){
+  const mode = document.querySelector('input[name="print-view-mode"]:checked')?.value || 'staff';
+  const includeStaff = mode === 'staff' ? document.getElementById('popt-staff').checked : false;
+  const selectedItems = mode === 'staff'
+    ? [...document.querySelectorAll('.popt-item')].filter(cb=>cb.checked).map(cb=>parseInt(cb.dataset.idx))
+    : DB.uniforms.map((_,i)=>i); // totals mode: show all items
+  closeAllModals();
+  openPrintPreview(includeStaff, selectedItems, mode);
+}
+
+function openPrintPreview(includeStaff = true, selectedItemIdxs = null, viewMode = 'staff'){
+  const uniforms = DB.uniforms;
+  const entries  = getFilteredEntries();
+  const from = document.getElementById('filter-date-from').value;
+  const to   = document.getElementById('filter-date-to').value;
+  const loc  = document.getElementById('filter-location').value;
+
+  const showItems = selectedItemIdxs !== null
+    ? uniforms.filter((_, i) => selectedItemIdxs.includes(i))
+    : uniforms;
+
+  const locNames   = loc ? [loc] : [...new Set(entries.map(e=>e.location))].filter(Boolean);
+  const colTotals  = showItems.map(u => entries.reduce((s,e)=>s+(e.items[u]||0),0));
+  const gt         = entries.reduce((s,e)=>s+e.grandTotal,0);
+
+  // Build smart date display: if no filter, default to 1st of current month → today
+  const _today = new Date().toISOString().split('T')[0];
+  const _todayFmt = fmtDate(_today);
+  const _firstOfMonth = _today.substring(0,8) + '01';
+  const _firstFmt = fmtDate(_firstOfMonth);
+  const dateDisplay = (from || to)
+    ? `${from ? fmtDate(from) : _firstFmt} → ${to ? fmtDate(to) : _todayFmt}`
+    : `${_firstFmt} → ${_todayFmt}`;
+
+  let bodyHTML = '';
+
+  if(viewMode === 'totals'){
+    // ── TOTALS ONLY MODE ──
+    // One summary row per item + grand total
+    bodyHTML = `
+      <div class="print-header-bar">
+        <div class="print-logo">Union Camp <span>Laundry</span></div>
+      </div>
+      <div class="print-info-row">
+        <div class="pi"><strong>Date</strong>${dateDisplay}</div>
+        <div class="pi"><strong>Location(s)</strong>${locNames.length ? locNames.join(', ') : 'All'}</div>
+      </div>
+      <table class="print-table">
+        <thead><tr><th>Uniform Item</th><th style="text-align:center">Total Qty</th></tr></thead>
+        <tbody>
+          ${showItems.map((u,i)=>`<tr>
+            <td><strong>${u}</strong></td>
+            <td style="font-family:'DM Mono',monospace;font-weight:700;text-align:center">${colTotals[i]}</td>
+          </tr>`).join('')}
+        </tbody>
+        <tfoot><tr>
+          <td><strong>GRAND TOTAL</strong></td>
+          <td style="text-align:center;font-size:16px">${gt}</td>
+        </tr></tfoot>
+      </table>`;
+  } else {
+    // ── STAFF SERIAL-WISE MODE ──
+    let colCount = showItems.length + 1;
+    if(includeStaff) colCount += 1;
+    colCount += 1;
+    bodyHTML = `
+      <div class="print-header-bar">
+        <div class="print-logo">Union Camp <span>Laundry</span></div>
+        <div class="print-meta" style="text-align:right;font-size:12px;color:var(--text-muted)">
+          <strong>Daily Report — Staff Serial-wise</strong><br>
+          Printed: ${fmtDate(new Date().toISOString().split('T')[0])} &nbsp;|&nbsp; By: ${currentUser?.display||'—'}
+        </div>
+      </div>
+      <div class="print-info-row">
+        <div class="pi"><strong>Date</strong>${dateDisplay}</div>
+        <div class="pi"><strong>Location(s)</strong>${locNames.length ? locNames.join(', ') : 'All'}</div>
+      </div>
+      <table class="print-table">
+        <thead><tr>
+          <th>#</th>
+          ${includeStaff ? '<th>Union Staff</th>' : ''}
+          ${showItems.map(u=>`<th>${u}</th>`).join('')}
+          <th>Total Qty</th>
+        </tr></thead>
+        <tbody>
+          ${entries.length
+            ? entries.map((e,i)=>`<tr>
+                <td style="font-family:'DM Mono',monospace;color:#888;font-size:11px">${String(i+1).padStart(2,'0')}</td>
+                ${includeStaff ? `<td>${e.unionStaff}</td>` : ''}
+                ${showItems.map(u=>`<td style="font-family:'DM Mono',monospace;text-align:center">${e.items[u]||0}</td>`).join('')}
+                <td style="font-family:'DM Mono',monospace;font-weight:700;text-align:center">${e.grandTotal}</td>
+              </tr>`).join('')
+            : `<tr><td colspan="${colCount}" style="text-align:center;padding:20px;color:#999">No records found.</td></tr>`
+          }
+        </tbody>
+        <tfoot><tr>
+          <td colspan="${includeStaff ? 2 : 1}">TOTALS</td>
+          ${colTotals.map(t=>`<td style="text-align:center">${t}</td>`).join('')}
+          <td style="text-align:center">${gt}</td>
+        </tr></tfoot>
+      </table>`;
+  }
+
+  document.getElementById('print-content').innerHTML = bodyHTML;
+  document.getElementById('print-preview-modal').classList.add('open');
+}
+
+function closePrintPreview(){
+  document.getElementById('print-preview-modal').classList.remove('open');
+  document.body.classList.remove('printing-statement');
+}
+
+// Wrap window.print for statement so it uses the right CSS class
+function printStatement(){
+  document.body.classList.add('printing-statement');
+  setTimeout(()=>{
+    window.print();
+    setTimeout(()=> document.body.classList.remove('printing-statement'), 1500);
+  }, 100);
+}
+
+// ── PIECES PRINT OPTIONS (Monthly tab) ────────
+function openPiecesPrintOptions(){
+  const uniforms = DB.uniforms;
+  const list = document.getElementById('ppopt-items-list');
+  list.innerHTML = uniforms.map((u,i)=>
+    `<label class="print-opt-check"><input type="checkbox" class="ppopt-item" data-idx="${i}" checked> ${u}</label>`
+  ).join('');
+  document.getElementById('ppm-staff').checked = true;
+  onPiecesPrintModeChange();
+  document.getElementById('pieces-print-options-modal').classList.add('open');
+}
+
+function onPiecesPrintModeChange(){
+  const isTotals = document.getElementById('ppm-totals').checked;
+  document.getElementById('ppm-staff-label').style.borderColor = isTotals ? 'var(--border)' : 'var(--primary)';
+  document.getElementById('ppm-staff-label').style.background  = isTotals ? '' : '#f0f5ff';
+  document.getElementById('ppm-totals-label').style.borderColor = isTotals ? 'var(--primary)' : 'var(--border)';
+  document.getElementById('ppm-totals-label').style.background  = isTotals ? '#f0f5ff' : '';
+  document.getElementById('ppopt-columns-section').style.display = isTotals ? 'none' : 'block';
+  document.getElementById('ppopt-selectall-section').style.display = isTotals ? 'none' : 'block';
+}
+
+function setPiecePrintItemsAll(val){
+  document.querySelectorAll('.ppopt-item').forEach(cb => cb.checked = val);
+}
+
+function applyPiecesPrintOptions(){
+  const mode = document.querySelector('input[name="pieces-print-mode"]:checked')?.value || 'staff';
+  const includeStaff = mode === 'staff' ? document.getElementById('ppopt-staff').checked : false;
+  const selectedItems = mode === 'staff'
+    ? [...document.querySelectorAll('.ppopt-item')].filter(cb=>cb.checked).map(cb=>parseInt(cb.dataset.idx))
+    : DB.uniforms.map((_,i)=>i);
+  closeAllModals();
+  printPiecesStatement(mode, includeStaff, selectedItems);
+}
+
+// ── EDIT ENTRY ────────────────────────────────
+let editingEntryId = null;
+function openEditEntry(id){
+  const entries = DB.entries;
+  const e = entries.find(x=>String(x.id)===String(id));
+  if(!e) return;
+  // Staff can only edit their own camp's entries
+  if(currentUser?.role==='staff' && currentUser.location !== e.location){
+    alert(`🔒 Access Denied\n\nYou can only edit entries from your assigned camp (${currentUser.location}).\nThis entry belongs to ${e.location}.`);
+    return;
+  }
+  editingEntryId = id;
+  document.getElementById('edit-entry-date').value = e.date;
+  document.getElementById('edit-entry-location').value = e.location;
+  document.getElementById('edit-entry-berkeley').value = e.berkeleyStaff||'';
+  document.getElementById('edit-entry-union-staff').value = e.unionStaff;
+  // Show original submission time if available
+  const timeNote = document.getElementById('edit-entry-time-note');
+  if(timeNote) timeNote.textContent = e.time ? `Originally submitted at ${fmtTime(e.time)}` : '';
+  // Render items
+  const uniforms = DB.uniforms;
+  document.getElementById('edit-items-tbody').innerHTML = uniforms.map((item,i)=>`
+    <tr>
+      <td style="color:var(--text-muted);font-family:'DM Mono',monospace;font-size:12px">${String(i+1).padStart(2,'0')}</td>
+      <td><strong>${item}</strong></td>
+      <td style="text-align:center"><input class="qty-input" type="number" min="0" placeholder="0" id="edit-qty-${i}" value="${e.items[item]||''}" /></td>
+    </tr>`).join('');
+  document.getElementById('edit-entry-modal').classList.add('open');
+}
+function onEditLocationChange(){
+  const loc = document.getElementById('edit-entry-location').value;
+  document.getElementById('edit-entry-berkeley').value = getLocationStaff(loc);
+}
+async function saveEditEntry(){
+  // Guard: entry not yet synced to Supabase — editing a tmp_ id would cause a bigint error
+  if(String(editingEntryId).startsWith('tmp_')){
+    alert('⏳ This entry is still syncing to the database.\nPlease wait a moment, then try editing again.');
+    return;
+  }
+  const date = document.getElementById('edit-entry-date').value;
+  const loc  = document.getElementById('edit-entry-location').value;
+  const bs   = document.getElementById('edit-entry-berkeley').value;
+  const us   = document.getElementById('edit-entry-union-staff').value.trim();
+  if(!date||!loc||!us){ alert('Please fill in Date, Location, and Union Staff Name.'); return; }
+  const uniforms = DB.uniforms; const items={}; let grand=0;
+  uniforms.forEach((item,i)=>{ const v=parseInt(document.getElementById('edit-qty-'+i)?.value)||0; items[item]=v; grand+=v; });
+  if(grand===0){ alert('Please enter at least one item quantity.'); return; }
+
+  const limitCheck = checkMonthlyLimit(us, loc, date, grand, editingEntryId);
+  if(limitCheck.blocked){
+    alert(`🚫 LIMIT EXCEEDED!\n\n${us} at ${loc} has already submitted ${limitCheck.existing} pieces this month.\nUpdating to ${grand} pieces would reach ${limitCheck.total}, exceeding the 32-piece monthly limit.\n\nThis entry cannot be saved.`);
+    return;
+  }
+
+  const updatedEntry = {...CACHE.entries.find(x=>String(x.id)===String(editingEntryId)), date, location:loc, berkeleyStaff:bs, unionStaff:us, items, grandTotal:grand};
+  const idx = CACHE.entries.findIndex(x=>String(x.id)===String(editingEntryId));
+  if(idx>-1) CACHE.entries[idx] = updatedEntry;
+
+  if(limitCheck.warn){
+    setTimeout(()=>alert(`⚠️ WARNING — Monthly Limit Alert!\n\n${us} at ${loc} has now reached ${limitCheck.total} pieces this month.\nThe monthly limit is 32 pieces. Please advise accordingly.`), 200);
+  }
+
+  closeAllModals();
+  renderDashboard();
+  showAlert('edit-entry-alert','✅ Entry updated successfully!','alert-success');
+
+  // Persist to Supabase
+  try {
+    showLoader('Updating entry…');
+    await updateEntryInSupabase(updatedEntry);
+    hideLoader();
+    showSyncBadge();
+  } catch(err){
+    hideLoader();
+    showDbError('⚠️ Update not synced: ' + err.message);
+  }
+}
+// Delete all login/logout history (admin only)
+async function deleteAllSessions(){
+  if(!confirm('Clear ALL login/logout history?\n\nThis will erase all staff session records permanently.')) return;
+  showLoader('Clearing session history…');
+  try {
+    await sbFetch('staff_sessions?id=gt.0', { method:'DELETE', prefer:'return=minimal' });
+    hideLoader();
+    showSyncBadge();
+    // Refresh if on that tab
+    const tbody = document.getElementById('lh-tbody');
+    if(tbody) tbody.innerHTML='<tr><td colspan="5" style="text-align:center;color:var(--text-muted);padding:24px">No records found for this filter.</td></tr>';
+    const countEl = document.getElementById('lh-count');
+    if(countEl) countEl.textContent = '0 sessions';
+    alert('✅ Login history cleared.');
+  } catch(err){
+    hideLoader();
+    showDbError('⚠️ Clear sessions failed: ' + err.message);
+  }
+}
+
+// Quick delete from dashboard/report row (admin only)
+async function quickDeleteEntry(id){
+  if(!confirm('Delete this entry permanently? This cannot be undone.')) return;
+  CACHE.entries = CACHE.entries.filter(x=>String(x.id)!==String(id));
+  renderDashboard();
+  if(document.getElementById('page-report').classList.contains('active')) renderReport();
+  try {
+    await sbFetch('entries?id=eq.'+id, { method:'DELETE', prefer:'return=minimal' });
+    showSyncBadge();
+  } catch(err){ showDbError('⚠️ Delete not synced: ' + err.message); }
+}
+
+// Delete ALL entries (admin only — used for training/reset)
+async function deleteAllEntries(){
+  if(!confirm('⚠️ DELETE ALL ENTRIES?\n\nThis will permanently erase every single entry from the database.\n\nType OK to confirm — this CANNOT be undone.')) return;
+  const confirm2 = prompt('Type DELETE to confirm erasing all entries:');
+  if(confirm2 !== 'DELETE'){ alert('Cancelled — no entries were deleted.'); return; }
+  showLoader('Deleting all entries…');
+  try {
+    await sbFetch('entries?id=gt.0', { method:'DELETE', prefer:'return=minimal' });
+    CACHE.entries = [];
+    hideLoader();
+    showSyncBadge();
+    renderDashboard();
+    if(document.getElementById('page-report').classList.contains('active')) renderReport();
+    alert('✅ All entries have been deleted.');
+  } catch(err){
+    hideLoader();
+    showDbError('⚠️ Delete all failed: ' + err.message);
+  }
+}
+
+async function deleteEditEntry(){
+  if(!confirm('Delete this entry permanently?')) return;
+  CACHE.entries = CACHE.entries.filter(x=>String(x.id)!==String(editingEntryId));
+  closeAllModals();
+  renderDashboard();
+  try {
+    await sbFetch('entries?id=eq.'+editingEntryId, { method:'DELETE', prefer:'return=minimal' });
+    showSyncBadge();
+  } catch(err){ showDbError('⚠️ Delete not synced: ' + err.message); }
+}
+
+// ── THERMAL RECEIPT ───────────────────────────
+function buildReceiptData(){
+  const date = document.getElementById('entry-date').value;
+  const loc  = document.getElementById('entry-location').value;
+  const bs   = document.getElementById('entry-berkeley-staff').value;
+  const us   = document.getElementById('entry-union-staff').value.trim();
+  const uniforms = DB.uniforms;
+  const items = []; let grand = 0;
+  document.querySelectorAll('.qty-input').forEach(inp=>{
+    const v = parseInt(inp.value)||0;
+    const name = uniforms[inp.dataset.idx];
+    items.push({name, qty: v});
+    grand += v;
+  });
+  return { date, loc, bs, us, items, grand };
+}
+
+function renderReceiptHTML(data){
+  const { date, loc, bs, us, items, grand } = data;
+  const fDate = fmtDate(date);
+  const now = new Date();
+  const printedAt = fmtDate(now.toISOString().split('T')[0]);
+  const activeItems = items.filter(i=>i.qty>0);
+  const itemRows = activeItems.map(i =>
+    `<div class="t-item"><span>${i.name}</span><span>${i.qty}</span></div>`
+  ).join('');
+  return `
+    <div class="t-center t-big">BERKELEY LAUNDRY</div>
+    <div class="t-center" style="font-size:10px;margin-bottom:4px">Union Camp Management System</div>
+    <div class="t-div"></div>
+    <div><span style="color:#555">Date:</span> <strong>${fDate}</strong></div>
+    <div><span style="color:#555">Location:</span> <strong>${loc||'—'}</strong></div>
+    <div><span style="color:#555">Berkeley Collector:</span> <strong>${bs||'—'}</strong></div>
+    <div class="t-div"></div>
+    <div><span style="color:#555">Union Staff:</span> <strong>${us||'—'}</strong></div>
+    <div class="t-div"></div>
+    <div style="font-size:10px;color:#555;margin-bottom:4px;text-transform:uppercase;letter-spacing:.5px">Items (qty &gt; 0)</div>
+    ${activeItems.length ? itemRows : '<div style="color:#999;font-size:10px">No items entered</div>'}
+    <div class="t-div"></div>
+    <div class="t-total"><span>GRAND TOTAL</span><span>${grand}</span></div>
+    <div style="text-align:center;margin-top:10px;font-size:11px">
+      --------------------------------<br>
+      <strong>Thank you for your service</strong><br>
+      --------------------------------<br>
+      <span style="font-size:9px;color:#888">Printed: ${printedAt}</span>
+    </div>`;
+}
+
+function buildThermalWindowHTML(data){
+  const { date, loc, bs, us, items, grand } = data;
+  const fDate = fmtDate(date);
+  const now = new Date();
+  const printedAt = fmtDate(now.toISOString().split('T')[0]);
+  const activeItems = items.filter(i=>i.qty>0);
+
+  const itemRows = activeItems.map(i=>{
+    // pad with dots between name and qty
+    const maxW = 30;
+    const gap = maxW - i.name.length - String(i.qty).length;
+    const dots = '.'.repeat(Math.max(gap, 1));
+    return `<div style="display:flex;justify-content:space-between;margin:1px 0"><span>${i.name}</span><span>${dots}${i.qty}</span></div>`;
+  }).join('');
+
+  return `<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Berkeley Laundry Receipt</title>
+<style>
+  @page {
+    size: 80mm auto;
+    margin: 3mm 2mm;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    font-family: 'Courier New', Courier, monospace;
+    font-size: 11px;
+    color: #000;
+    background: #fff;
+    width: 76mm;
+    padding: 0;
+    margin: 0 auto;
+  }
+  .center  { text-align: center; }
+  .bold    { font-weight: 900; }
+  .big     { font-size: 15px; font-weight: 900; letter-spacing: 1px; }
+  .small   { font-size: 9px; }
+  .div-dash{ border-top: 1px dashed #000; margin: 4px 0; }
+  .div-solid{ border-top: 1px solid #000; margin: 4px 0; }
+  .total-row { display: flex; justify-content: space-between; font-weight: 900; font-size: 13px; padding-top: 3px; }
+  .lbl { color: #555; }
+  .no-print { display: none; }
+  @media screen {
+    body { padding: 10px; }
+    .print-btn {
+      display: block !important;
+      margin: 10px auto 0;
+      padding: 8px 20px;
+      background: #1a3a5c;
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .close-btn {
+      display: block !important;
+      margin: 6px auto 0;
+      padding: 6px 20px;
+      background: transparent;
+      color: #1a3a5c;
+      border: 1px solid #1a3a5c;
+      border-radius: 6px;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+  }
+</style>
+</head>
+<body>
+  <div class="center big">BERKELEY LAUNDRY</div>
+  <div class="center small" style="margin-bottom:3px">Union Camp Management System</div>
+  <div class="div-dash"></div>
+  <div><span class="lbl">Date: </span><span class="bold">${fDate}</span></div>
+  <div><span class="lbl">Location: </span><span class="bold">${loc||'—'}</span></div>
+  <div><span class="lbl">Collector: </span><span class="bold">${bs||'—'}</span></div>
+  <div class="div-dash"></div>
+  <div><span class="lbl">Union Staff: </span><span class="bold">${us||'—'}</span></div>
+  <div class="div-dash"></div>
+  <div class="small" style="text-transform:uppercase;letter-spacing:.5px;margin-bottom:3px">Items (qty &gt; 0)</div>
+  ${activeItems.length ? itemRows : '<div class="small" style="color:#666">No items entered</div>'}
+  <div class="div-solid"></div>
+  <div class="total-row"><span>GRAND TOTAL</span><span>${grand}</span></div>
+  <div class="div-dash" style="margin-top:6px"></div>
+  <div class="center" style="margin-top:4px;font-size:10px">
+    <div class="bold">Thank you for your service</div>
+    <div class="div-dash" style="margin-top:4px"></div>
+    <div class="small" style="color:#666;margin-top:2px">Printed: ${printedAt}</div>
+  </div>
+
+  <button class="print-btn no-print" onclick="window.print()">🖨️ Print Receipt</button>
+  <button class="close-btn no-print" onclick="window.close()">✕ Close</button>
+
+<script>
+  // Auto-open print dialog after a short delay
+  window.onload = function(){ setTimeout(()=>window.print(), 400); };
+<\/script>
+</body>
+</html>`;
+}
+
+function printReceipt(){
+  const data = buildReceiptData();
+  openThermalWindow(data);
+}
+
+function saveAndPrint(){
+  const date = document.getElementById('entry-date').value;
+  const loc  = document.getElementById('entry-location').value;
+  const us   = document.getElementById('entry-union-staff').value.trim();
+  if(!date||!loc||!us){ alert('Please fill in Date, Location, and Union Staff Name.'); return; }
+
+  // ── WRONG CAMP CHECK (for Berkeley staff only) ─────────────
+  if(currentUser?.role === 'staff'){
+    const staffLoc = getUnionStaffCampLocation(us);
+    if(staffLoc && staffLoc !== loc){
+      window._pendingSaveAndPrint = true;
+      showWrongCampModal(us, staffLoc, loc);
+      return;
+    }
+  }
+  _doSaveAndPrint();
+}
+
+async function _doSaveAndPrint(){
+  const date = document.getElementById('entry-date').value;
+  const loc  = document.getElementById('entry-location').value;
+  const us   = document.getElementById('entry-union-staff').value.trim();
+  const uniforms = DB.uniforms; const items={}; let grand=0;
+  document.querySelectorAll('.qty-input').forEach(inp=>{ const v=parseInt(inp.value)||0; items[uniforms[inp.dataset.idx]]=v; grand+=v; });
+  if(grand===0){ alert('Please enter at least one item quantity to save.'); return; }
+
+  // ── DUPLICATE CHECK ──────────────────────────
+  const duplicate = checkDuplicateEntry(us, loc, date);
+  if(duplicate){ showDuplicateModal(duplicate); return; }
+
+  const limitCheck = checkMonthlyLimit(us, loc, date, grand);
+  if(limitCheck.blocked){
+    alert(`🚫 LIMIT EXCEEDED!\n\n${us} at ${loc} has already submitted ${limitCheck.existing} pieces this month.\nAdding ${grand} more would reach ${limitCheck.total} pieces, exceeding the 32-piece monthly limit.\n\nThis entry cannot be saved.`);
+    return;
+  }
+
+  // Capture receipt data BEFORE clearing form
+  const receiptData = buildReceiptData();
+
+  // Save the entry with time
+  const bs = document.getElementById('entry-berkeley-staff').value;
+  const now = new Date();
+  const timeStr = `${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+  const tempId = 'tmp_' + Date.now();
+  const newEntry = {id:tempId,date,time:timeStr,location:loc,berkeleyStaff:bs,unionStaff:us,items,grandTotal:grand};
+  CACHE.entries.push(newEntry);
+  const names = DB.unionNames; if(!names.includes(us)){ names.push(us); DB.unionNames=names; }
+
+  if(limitCheck.warn){
+    setTimeout(()=>alert(`⚠️ WARNING — Monthly Limit Alert!\n\n${us} at ${loc} has now reached ${limitCheck.total} pieces this month.\nThe monthly limit is 32 pieces. Please advise accordingly.`), 500);
+  }
+
+  // Show saved alert
+  document.getElementById('entry-success').style.display='block';
+  setTimeout(()=>document.getElementById('entry-success').style.display='none',3000);
+  clearEntryForm();
+
+  // Show preview modal
+  document.getElementById('thermal-preview-content').innerHTML = renderReceiptHTML(receiptData);
+  document.getElementById('thermal-modal').dataset.receiptData = JSON.stringify(receiptData);
+  document.getElementById('thermal-modal').classList.add('open');
+
+  // Persist to Supabase
+  try {
+    await saveEntryToSupabase(newEntry);
+    showSyncBadge();
+    renderDashboard();
+  } catch(err){
+    const is401 = err.message.includes('401') || err.message.includes('42501') || err.message.includes('row-level security');
+    const msg = is401
+      ? '⚠️ Save failed (401 Permission Error): Your Supabase API key is wrong. Go to Supabase Dashboard → Project Settings → API → copy the "anon public" key (starts with eyJ...) and replace SUPA_KEY in the code.'
+      : '⚠️ Entry saved locally but not synced: ' + err.message;
+    showDbError(msg);
+  }
+}
+
+function openThermalWindow(data){
+  const html = buildThermalWindowHTML(data);
+  const win = window.open('', '_blank', 'width=320,height=600,toolbar=0,menubar=0,location=0,status=0,scrollbars=1,resizable=1');
+  if(!win){ alert('Please allow popups for this page to print the receipt.'); return; }
+  win.document.open();
+  win.document.write(html);
+  win.document.close();
+}
+
+function closeThermalModal(){
+  document.getElementById('thermal-modal').classList.remove('open');
+}
+
+function printThermal(){
+  const data = JSON.parse(document.getElementById('thermal-modal').dataset.receiptData || '{}');
+  closeThermalModal();
+  setTimeout(()=> openThermalWindow(data), 150);
+}
+
+// ── UNION STAFF REPORT MODAL ──────────────────
+let unionReportStaff = '';
+let unionReportType = 'daily';
+
+function openUnionStaffReport(name){
+  unionReportStaff = name;
+  unionReportType = 'daily';
+  document.getElementById('union-report-title').textContent = `👷 ${name} — Report`;
+  document.getElementById('rtype-daily').classList.add('active');
+  document.getElementById('rtype-monthly').classList.remove('active');
+  renderUnionStaffReportContent();
+  document.getElementById('union-report-modal').classList.add('open');
+}
+
+function closeUnionReport(){
+  document.getElementById('union-report-modal').classList.remove('open');
+}
+
+function switchReportType(type){
+  unionReportType = type;
+  document.getElementById('rtype-daily').classList.toggle('active', type==='daily');
+  document.getElementById('rtype-monthly').classList.toggle('active', type==='monthly');
+  renderUnionStaffReportContent();
+}
+
+function renderUnionStaffReportContent(){
+  const name = unionReportStaff;
+  const entries = DB.entries.filter(e => e.unionStaff === name);
+  const uniforms = DB.uniforms;
+  const today = new Date().toISOString().split('T')[0];
+  const nowMonth = today.substring(0,7);
+  let filtered, periodLabel;
+
+  if(unionReportType === 'daily'){
+    filtered = entries.filter(e => e.date === today);
+    periodLabel = `Daily — ${fmtDate(today)}`;
+  } else {
+    filtered = entries.filter(e => e.date && e.date.startsWith(nowMonth));
+    const [y,m] = nowMonth.split('-');
+    const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+    periodLabel = `Monthly — ${monthNames[parseInt(m)-1]} ${y}`;
+  }
+
+  const grandTotal = filtered.reduce((s,e)=>s+e.grandTotal, 0);
+  const colTotals = uniforms.map(u => filtered.reduce((s,e)=>s+(e.items[u]||0),0));
+
+  const rows = filtered.length
+    ? filtered.map((e,i)=>`<tr>
+        <td style="font-family:'DM Mono',monospace;font-size:12px">${String(i+1).padStart(2,'0')}</td>
+        <td style="font-family:'DM Mono',monospace">${fmtDate(e.date)}</td>
+        <td><span class="badge-loc badge-${(e.location||'').replace(/\s/g,'')}">${e.location||'—'}</span></td>
+        <td>${e.berkeleyStaff||'—'}</td>
+        ${uniforms.map(u=>`<td style="font-family:'DM Mono',monospace;text-align:center">${e.items[u]||0}</td>`).join('')}
+        <td style="font-family:'DM Mono',monospace;font-weight:700;text-align:center">${e.grandTotal}</td>
+      </tr>`).join('')
+    : `<tr><td colspan="${5+uniforms.length}" style="text-align:center;padding:20px;color:var(--text-muted)">No entries for this period.</td></tr>`;
+
+  document.getElementById('union-report-content').innerHTML = `
+    <div style="font-size:13px;color:var(--text-muted);margin-bottom:12px">
+      <strong style="color:var(--primary)">${name}</strong> &nbsp;|&nbsp; ${periodLabel} &nbsp;|&nbsp;
+      <strong style="color:var(--primary)">${filtered.length}</strong> submission(s) &nbsp;|&nbsp;
+      Total: <strong style="color:var(--primary);font-family:'DM Mono',monospace">${grandTotal}</strong> items
+    </div>
+    <div style="overflow-x:auto;max-height:340px;overflow-y:auto">
+      <table class="report-table" style="font-size:12px">
+        <thead><tr>
+          <th>#</th><th>Date</th><th>Location</th><th>Berkeley Staff</th>
+          ${uniforms.map(u=>`<th>${u}</th>`).join('')}
+          <th>Total</th>
+        </tr></thead>
+        <tbody>${rows}</tbody>
+        ${filtered.length ? `<tfoot><tr>
+          <td colspan="4">TOTALS</td>
+          ${colTotals.map(t=>`<td style="text-align:center">${t}</td>`).join('')}
+          <td style="text-align:center">${grandTotal}</td>
+        </tr></tfoot>` : ''}
+      </table>
+    </div>`;
+}
+
+function printUnionStaffReport(){
+  const name = unionReportStaff;
+  const entries = DB.entries.filter(e => e.unionStaff === name);
+  const uniforms = DB.uniforms;
+  const today = new Date().toISOString().split('T')[0];
+  const nowMonth = today.substring(0,7);
+  let filtered, periodLabel;
+
+  if(unionReportType === 'daily'){
+    filtered = entries.filter(e => e.date === today);
+    periodLabel = `Daily Report — ${fmtDate(today)}`;
+  } else {
+    filtered = entries.filter(e => e.date && e.date.startsWith(nowMonth));
+    const [y,m] = nowMonth.split('-');
+    const monthNames = ['January','February','March','April','May','June','July','August','September','October','November','December'];
+    periodLabel = `Monthly Report — ${monthNames[parseInt(m)-1]} ${y}`;
+  }
+
+  const grandTotal = filtered.reduce((s,e)=>s+e.grandTotal, 0);
+  const colTotals = uniforms.map(u => filtered.reduce((s,e)=>s+(e.items[u]||0),0));
+  const printDate = fmtDate(today);
+
+  const rowsHTML = filtered.length
+    ? filtered.map((e,i)=>`<tr>
+        <td style="font-family:'Courier New',monospace;color:#888;font-size:11px">${String(i+1).padStart(2,'0')}</td>
+        <td style="font-family:'Courier New',monospace">${fmtDate(e.date)}</td>
+        <td>${e.location||'—'}</td>
+        <td>${e.berkeleyStaff||'—'}</td>
+        ${uniforms.map(u=>`<td style="font-family:'Courier New',monospace;text-align:center">${e.items[u]||0}</td>`).join('')}
+        <td style="font-family:'Courier New',monospace;font-weight:700;text-align:center">${e.grandTotal}</td>
+      </tr>`).join('')
+    : `<tr><td colspan="${5+uniforms.length}" style="text-align:center;padding:20px;color:#999">No entries for this period.</td></tr>`;
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Union Staff Report</title>
+  <style>
+    @page { size: A4 landscape; margin: 12mm 10mm; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Courier New',Courier,monospace; font-size:11px; color:#000; background:#fff; }
+    .hdr { text-align:center; margin-bottom:10px; }
+    .hdr h1 { font-size:15px; font-weight:900; }
+    .hdr p { font-size:10px; color:#555; }
+    .div { border-top:1px solid #333; margin:8px 0; }
+    .meta { display:flex; gap:20px; margin:8px 0; font-size:11px; }
+    .meta strong { display:block; font-size:9px; text-transform:uppercase; color:#888; }
+    table { width:100%; border-collapse:collapse; margin-top:8px; font-size:10px; }
+    th { background:#1a3a5c; color:#fff; padding:5px 7px; text-align:left; }
+    td { padding:5px 7px; border-bottom:1px solid #eee; }
+    tr:nth-child(even) td { background:#f7f9fc; }
+    tfoot td { background:#1a3a5c; color:#fff; font-weight:700; }
+    .footer { text-align:center; margin-top:10px; font-size:9px; color:#888; }
+  </style></head><body>
+  <div class="hdr"><h1>BERKELEY LAUNDRY — ${periodLabel.toUpperCase()}</h1>
+  <p>Union Staff: <strong>${name}</strong> &nbsp;|&nbsp; Printed: ${printDate} &nbsp;|&nbsp; By: ${currentUser?.display||'—'}</p></div>
+  <div class="div"></div>
+  <div class="meta">
+    <div><strong>Staff Name</strong>${name}</div>
+    <div><strong>Period</strong>${periodLabel}</div>
+    <div><strong>Submissions</strong>${filtered.length}</div>
+    <div><strong>Total Items</strong>${grandTotal}</div>
+  </div>
+  <div class="div"></div>
+  <table>
+    <thead><tr><th>#</th><th>Date</th><th>Location</th><th>Berkeley Staff</th>${uniforms.map(u=>`<th>${u}</th>`).join('')}<th>Total</th></tr></thead>
+    <tbody>${rowsHTML}</tbody>
+    ${filtered.length?`<tfoot><tr><td colspan="4">TOTALS</td>${colTotals.map(t=>`<td style="text-align:center">${t}</td>`).join('')}<td style="text-align:center">${grandTotal}</td></tr></tfoot>`:''}
+  </table>
+  <div class="footer">— End of Report — Union Camp Laundry Management System</div>
+  <script>window.onload=function(){setTimeout(()=>window.print(),300);};<\/script>
+  </body></html>`;
+
+  const win = window.open('','_blank','width=900,height=650,toolbar=0,menubar=0,location=0,scrollbars=1,resizable=1');
+  if(!win){ alert('Please allow popups for printing.'); return; }
+  win.document.open(); win.document.write(html); win.document.close();
+}
+
+document.addEventListener('click', e => {
+  if(e.target === document.getElementById('union-report-modal')) closeUnionReport();
+  if(e.target === document.getElementById('print-preview-modal')) closePrintPreview();
+  if(e.target === document.getElementById('thermal-modal')) closeThermalModal();
+});
+
+// ── UNION STAFF PAGE (Name + Camp only) ──
+let activeUnionStaffCampFilter = '';
+
+function setUnionStaffCampFilter(loc){
+  activeUnionStaffCampFilter = loc;
+  document.querySelectorAll('#union-staff-camp-filter-bar .camp-filter-btn').forEach(b=>b.classList.remove('active'));
+  const btnId = loc ? 'usfbtn-'+loc : 'usfbtn-all';
+  const btn = document.getElementById(btnId);
+  if(btn) btn.classList.add('active');
+  renderUnionStaff();
+}
+
+function renderUnionStaff(){
+  const searchRaw = document.getElementById('union-staff-search')?.value || '';
+  const search    = searchRaw.toLowerCase();
+  const campFilter = activeUnionStaffCampFilter;
+
+  const allNames = [...new Set([...DB.unionNames, ...DB.entries.map(e=>e.unionStaff).filter(Boolean)])].sort();
+  let filtered = search ? allNames.filter(n => n.toLowerCase().includes(search)) : allNames;
+
+  // Filter by selected camp
+  if(campFilter){
+    filtered = filtered.filter(name => {
+      return DB.entries.some(e => e.unionStaff === name && e.location === campFilter);
+    });
+  }
+
+  document.getElementById('union-staff-count').textContent = `${filtered.length} staff`;
+
+  if(!filtered.length){
+    document.getElementById('union-staff-tbody').innerHTML =
+      `<tr><td colspan="2" style="text-align:center;color:var(--text-muted);padding:28px">No union staff found.</td></tr>`;
+    return;
+  }
+
+  const rows = filtered.map(name => {
+    const staffEntries = DB.entries.filter(e => e.unionStaff === name);
+    const locations = campFilter
+      ? [campFilter]
+      : [...new Set(staffEntries.map(e=>e.location))];
+    const locDisplay = locations.length
+      ? locations.map(l=>`<span class="badge-loc badge-${l.replace(/\s/g,'')}">${l}</span>`).join(' ')
+      : '<span style="color:var(--text-muted)">—</span>';
+    return `<tr>
+      <td><strong>${name}</strong></td>
+      <td>${locDisplay}</td>
+    </tr>`;
+  }).join('');
+
+  document.getElementById('union-staff-tbody').innerHTML = rows;
+}
+
+// ── PIECES DAILY & MONTHLY ────────────────────
+let activePiecesCampFilter = '';
+
+function setPiecesCampFilter(loc){
+  // Staff can only see their own camp
+  if(currentUser?.role==='staff' && loc && loc !== currentUser.location) return;
+  activePiecesCampFilter = loc;
+  document.querySelectorAll('#pieces-camp-filter-bar .camp-filter-btn').forEach(b=>b.classList.remove('active'));
+  const btnId = loc ? 'pcfbtn-'+loc : 'pcfbtn-all';
+  const btn = document.getElementById(btnId);
+  if(btn) btn.classList.add('active');
+  const lbl = document.getElementById('pieces-camp-filter-label');
+  if(lbl) lbl.textContent = loc ? `Showing: ${loc}` : '';
+  renderPieces();
+}
+
+// ── MONTH / YEAR PICKER ──────────────────────
+let selectedMonth = 0; // 1-12, 0 = none
+let selectedYear  = 0; // e.g. 2025, 0 = none
+
+function initMonthYearPicker(){
+  const yearSel = document.getElementById('year-picker');
+  if(!yearSel) return;
+  const currentYear = new Date().getFullYear();
+  yearSel.innerHTML = '<option value="">-- Year --</option>';
+  for(let y = currentYear - 2; y <= currentYear + 1; y++){
+    const opt = document.createElement('option');
+    opt.value = y; opt.textContent = y;
+    if(y === currentYear) opt.selected = true;
+    yearSel.appendChild(opt);
+  }
+  selectedYear = currentYear;
+  // Pre-select current month
+  const curMonth = new Date().getMonth() + 1;
+  const monthNames = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  selectMonth(curMonth, monthNames[curMonth-1]);
+}
+
+function toggleMonthDropdown(e){
+  e.stopPropagation();
+  const dd = document.getElementById('month-dropdown');
+  dd.style.display = dd.style.display === 'none' ? 'block' : 'none';
+}
+
+function selectMonth(num, label){
+  selectedMonth = num;
+  document.getElementById('month-picker-label').textContent = label;
+  document.getElementById('month-dropdown').style.display = 'none';
+  // Highlight active button
+  document.querySelectorAll('.month-opt-btn').forEach((b,i) => {
+    b.classList.toggle('active', i+1 === num);
+  });
+  applyMonthYearFilter();
+}
+
+function applyMonthYearFilter(){
+  const yr = parseInt(document.getElementById('year-picker').value) || selectedYear || new Date().getFullYear();
+  const mo = selectedMonth || (new Date().getMonth() + 1);
+  const pad = n => String(n).padStart(2,'0');
+  const lastDay = new Date(yr, mo, 0).getDate();
+  const from = `${yr}-${pad(mo)}-01`;
+  const to   = `${yr}-${pad(mo)}-${pad(lastDay)}`;
+  document.getElementById('pieces-date-from').value = from;
+  document.getElementById('pieces-date-to').value   = to;
+  renderPieces();
+}
+
+// Close month dropdown when clicking outside
+document.addEventListener('click', e => {
+  const dd = document.getElementById('month-dropdown');
+  if(dd && !dd.contains(e.target) && e.target.id !== 'month-picker-btn'){
+    dd.style.display = 'none';
+  }
+});
+
+function initPiecesPage(){
+  // Initialize month/year picker (sets hidden date inputs automatically)
+  initMonthYearPicker();
+  onPiecesStaffInput();
+  // Setup camp filter buttons visibility for staff
+  const filterBar = document.getElementById('pieces-camp-filter-bar');
+  if(filterBar){
+    if(currentUser?.role==='staff'){
+      ['AQ-M1','AQ-M2','AQ-F','SR-M','SR-F'].forEach(l=>{
+        const b=document.getElementById('pcfbtn-'+l);
+        if(b) b.style.display=(l===currentUser.location)?'inline-flex':'none';
+      });
+      const allBtn=document.getElementById('pcfbtn-all');
+      if(allBtn) allBtn.style.display='none';
+      // Auto-select their camp
+      activePiecesCampFilter = currentUser.location;
+      const myBtn=document.getElementById('pcfbtn-'+currentUser.location);
+      document.querySelectorAll('#pieces-camp-filter-bar .camp-filter-btn').forEach(b=>b.classList.remove('active'));
+      if(myBtn) myBtn.classList.add('active');
+    } else {
+      ['AQ-M1','AQ-M2','AQ-F','SR-M','SR-F'].forEach(l=>{
+        const b=document.getElementById('pcfbtn-'+l);
+        if(b) b.style.display='inline-flex';
+      });
+      const allBtn=document.getElementById('pcfbtn-all');
+      if(allBtn) allBtn.style.display='inline-flex';
+    }
+  }
+}
+
+function clearPiecesFilters(){
+  document.getElementById('pieces-staff-search').value = '';
+  document.getElementById('pieces-autocomplete-list').style.display = 'none';
+  // Reset to current month/year
+  initMonthYearPicker();
+}
+
+function onPiecesStaffInput(){
+  const val = document.getElementById('pieces-staff-search').value.toLowerCase();
+  const list = document.getElementById('pieces-autocomplete-list');
+  const allNames = [...new Set([...DB.unionNames, ...DB.entries.map(e=>e.unionStaff).filter(Boolean)])].sort();
+  const names = val ? allNames.filter(n=>n.toLowerCase().includes(val)) : [];
+  if(!val || !names.length){ list.style.display='none'; return; }
+  list.innerHTML = names.map(n=>`<div class="autocomplete-item" onclick="document.getElementById('pieces-staff-search').value='${n.replace(/'/g,"\\'")}';document.getElementById('pieces-autocomplete-list').style.display='none';renderPieces()">${n}</div>`).join('');
+  list.style.display='block';
+}
+
+function renderPieces(){
+  const uniforms = DB.uniforms;
+  const dateFrom  = document.getElementById('pieces-date-from').value;
+  const dateTo    = document.getElementById('pieces-date-to').value;
+  const staffFilter = document.getElementById('pieces-staff-search').value.trim();
+  const today = new Date().toISOString().split('T')[0];
+
+  // Build period label
+  let periodLabel;
+  if(dateFrom && dateTo && dateFrom === dateTo){
+    periodLabel = `Daily — ${fmtDate(dateFrom)}`;
+  } else if(dateFrom && dateTo){
+    periodLabel = `${fmtDate(dateFrom)} → ${fmtDate(dateTo)}`;
+  } else if(dateFrom){
+    periodLabel = `From ${fmtDate(dateFrom)}`;
+  } else if(dateTo){
+    periodLabel = `Up to ${fmtDate(dateTo)}`;
+  } else {
+    periodLabel = 'All Dates';
+  }
+
+  document.getElementById('pieces-panel-title').textContent = `📦 Pieces Overview — ${periodLabel}`;
+
+  // Date filter function
+  const filterFn = e => {
+    if(!e.date) return false;
+    if(dateFrom && e.date < dateFrom) return false;
+    if(dateTo   && e.date > dateTo)   return false;
+    return true;
+  };
+
+  // Respect role: staff only sees their camp
+  let entries = DB.entries.filter(filterFn);
+  if(currentUser?.role === 'staff') entries = entries.filter(e=>e.location===currentUser.location);
+
+  // Apply camp filter button selection (admin)
+  if(currentUser?.role === 'admin' && activePiecesCampFilter){
+    entries = entries.filter(e=>e.location===activePiecesCampFilter);
+  }
+
+  // Filter by specific staff name if provided
+  if(staffFilter) entries = entries.filter(e=>e.unionStaff && e.unionStaff.toLowerCase().includes(staffFilter.toLowerCase()));
+
+  document.getElementById('pieces-record-count').textContent = `${entries.length} submission(s)`;
+
+  // ── Summary stat cards ──
+  const totalPcs = entries.reduce((s,e)=>s+e.grandTotal,0);
+  const uniqueStaff = [...new Set(entries.map(e=>e.unionStaff))].length;
+  const uniqueLocations = [...new Set(entries.map(e=>e.location))].length;
+  const colTotals = uniforms.map(u=>entries.reduce((s,e)=>s+(e.items[u]||0),0));
+  const topItemIdx = colTotals.indexOf(Math.max(...colTotals));
+  const topItem = uniforms[topItemIdx] || '—';
+
+  // Monthly limit check for summary (use dateTo month as reference)
+  const refYM = dateTo ? dateTo.substring(0,7) : today.substring(0,7);
+  let limitWarnings = 0;
+  const allUniqueNames = [...new Set(entries.map(e=>e.unionStaff))];
+  allUniqueNames.forEach(name=>{
+    const locs = [...new Set(entries.filter(e=>e.unionStaff===name).map(e=>e.location))];
+    locs.forEach(loc=>{
+      const qty = getMonthlyTotal(name, loc, refYM, undefined);
+      if(qty >= MONTHLY_WARN) limitWarnings++;
+    });
+  });
+
+  document.getElementById('pieces-summary-cards').innerHTML = `
+    <div class="stat-card accent-card"><div class="label">Total Pieces</div><div class="value">${totalPcs}</div><div class="sub">${entries.length} submissions</div></div>
+    <div class="stat-card"><div class="label">Staff Members</div><div class="value">${uniqueStaff}</div><div class="sub">${uniqueLocations} camp(s)</div></div>
+    <div class="stat-card"><div class="label">Top Item</div><div class="value" style="font-size:18px">${topItem}</div><div class="sub">${Math.max(...colTotals,0)} pcs</div></div>
+    <div class="stat-card" style="${limitWarnings>0?'border:2px solid var(--danger);background:#fff5f5':''}">
+      <div class="label">Limit Alerts</div>
+      <div class="value" style="color:${limitWarnings>0?'var(--danger)':'var(--success)'}">${limitWarnings}</div>
+      <div class="sub">${limitWarnings>0?`${limitWarnings} at/near limit`:'All within limit'}</div>
+    </div>`;
+
+  // ── Table header ──
+  const nowYearMonth = today.substring(0,7);
+  const nowYear = today.substring(0,4);
+  const MONTHLY_LIMIT = 32, MONTHLY_WARN_VAL = 28;
+  const allStaffNames = [...new Set(entries.map(e=>e.unionStaff).filter(Boolean))].sort();
+
+  document.getElementById('pieces-thead').innerHTML=`<tr>
+    <th>Union Staff</th>
+    <th>Location</th>
+    ${uniforms.map(u=>`<th style="text-align:center">${u}</th>`).join('')}
+    <th style="text-align:center">Total</th>
+    <th style="text-align:center">Monthly Status</th>
+  </tr>`;
+
+  // Foot totals
+  const footItemTotals = uniforms.map(u=>entries.reduce((s,e)=>s+(e.items[u]||0),0));
+  const footGrand = entries.reduce((s,e)=>s+e.grandTotal,0);
+  document.getElementById('pieces-tfoot').innerHTML=`<tr>
+    <td colspan="2">TOTALS</td>
+    ${footItemTotals.map(t=>`<td style="text-align:center">${t}</td>`).join('')}
+    <td style="text-align:center">${footGrand}</td>
+    <td></td>
+  </tr>`;
+
+  if(!allStaffNames.length){
+    document.getElementById('pieces-tbody').innerHTML=`<tr><td colspan="${uniforms.length+4}" style="text-align:center;color:var(--text-muted);padding:28px">No data for this period.</td></tr>`;
+    return;
+  }
+
+  // Body: one row per staff+location combo
+  const tbody = [];
+  allStaffNames.forEach(name=>{
+    const staffRows = entries.filter(e=>e.unionStaff===name);
+    const locations = [...new Set(staffRows.map(e=>e.location))];
+    locations.forEach((loc, li)=>{
+      const locRows = staffRows.filter(e=>e.location===loc);
+      const itemQtys = uniforms.map(u=>locRows.reduce((s,e)=>s+(e.items[u]||0),0));
+      const total = locRows.reduce((s,e)=>s+e.grandTotal,0);
+
+      // Use dateTo month (or today) as reference for monthly limit
+      const ym = (dateTo||today).substring(0,7);
+      const monthQty = getMonthlyTotal(name, loc, ym, undefined);
+      let limitCell = '', rowStyle = '';
+      if(monthQty >= MONTHLY_LIMIT){
+        limitCell = `<span style="color:var(--danger);font-weight:700">⛔ ${monthQty}/32 EXCEEDED</span>`;
+        rowStyle = 'background:#fff0f0';
+      } else if(monthQty >= MONTHLY_WARN_VAL){
+        limitCell = `<span style="color:#b45309;font-weight:700">⚠️ ${monthQty}/32 WARNING</span>`;
+        rowStyle = 'background:#fffbeb';
+      } else {
+        limitCell = `<span style="color:var(--success);font-weight:600">✅ ${monthQty}/32</span>`;
+      }
+
+      tbody.push(`<tr style="${rowStyle}">
+        ${li===0?`<td rowspan="${locations.length}" style="vertical-align:top;padding-top:10px"><strong>${name}</strong></td>`:''}
+        <td><span class="badge-loc badge-${loc.replace(/\s/g,'')}">${loc}</span></td>
+        ${itemQtys.map(q=>`<td style="text-align:center;font-family:'DM Mono',monospace;font-weight:600">${q||'—'}</td>`).join('')}
+        <td style="text-align:center;font-family:'DM Mono',monospace;font-weight:700;color:var(--primary)">${total}</td>
+        <td style="text-align:center">${limitCell}</td>
+      </tr>`);
+    });
+  });
+  document.getElementById('pieces-tbody').innerHTML = tbody.join('');
+}
+
+// ── PIECES EXPORT / PRINT ─────────────────────
+function getPiecesTableData(){
+  const dateFrom    = document.getElementById('pieces-date-from').value;
+  const dateTo      = document.getElementById('pieces-date-to').value;
+  const staffFilter = document.getElementById('pieces-staff-search').value.trim();
+  const today       = new Date().toISOString().split('T')[0];
+  const uniforms    = DB.uniforms;
+
+  let periodLabel;
+  if(dateFrom && dateTo && dateFrom === dateTo) periodLabel = `Daily — ${fmtDate(dateFrom)}`;
+  else if(dateFrom && dateTo) periodLabel = `${fmtDate(dateFrom)} to ${fmtDate(dateTo)}`;
+  else if(dateFrom) periodLabel = `From ${fmtDate(dateFrom)}`;
+  else if(dateTo)   periodLabel = `Up to ${fmtDate(dateTo)}`;
+  else              periodLabel = 'All Dates';
+
+  const filterFn = e => {
+    if(!e.date) return false;
+    if(dateFrom && e.date < dateFrom) return false;
+    if(dateTo   && e.date > dateTo)   return false;
+    return true;
+  };
+
+  let entries = DB.entries.filter(filterFn);
+  if(currentUser?.role === 'staff') entries = entries.filter(e=>e.location===currentUser.location);
+  if(currentUser?.role === 'admin' && activePiecesCampFilter) entries = entries.filter(e=>e.location===activePiecesCampFilter);
+  if(staffFilter) entries = entries.filter(e=>e.unionStaff && e.unionStaff.toLowerCase().includes(staffFilter.toLowerCase()));
+
+  const refYM = (dateTo||today).substring(0,7);
+  return { entries, uniforms, periodLabel, refYM };
+}
+
+function exportPiecesCSV(){
+  const { entries, uniforms, periodLabel } = getPiecesTableData();
+  if(!entries.length){ alert('No data to export for the current filter.'); return; }
+  const headers = ['Date','Union Staff','Location','Berkeley Staff',...uniforms,'Total'];
+  const rows = entries.map(e=>{
+    const itemVals = uniforms.map(u=>e.items[u]||0);
+    return [e.date, e.unionStaff||'', e.location||'', e.berkeleyStaff||'', ...itemVals, e.grandTotal].map(v=>`"${String(v).replace(/"/g,'""')}"`).join(',');
+  });
+  const csv = [headers.join(','), ...rows].join('\n');
+  const blob = new Blob([csv], {type:'text/csv'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `pieces_${periodLabel.replace(/[^a-z0-9]/gi,'_')}.csv`;
+  a.click();
+}
+
+function exportPiecesJSON(){
+  const { entries, periodLabel } = getPiecesTableData();
+  if(!entries.length){ alert('No data to export for the current filter.'); return; }
+  const blob = new Blob([JSON.stringify({period:periodLabel, entries}, null, 2)], {type:'application/json'});
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+  a.download = `pieces_${periodLabel.replace(/[^a-z0-9]/gi,'_')}.json`;
+  a.click();
+}
+
+function printPiecesStatement(viewMode, includeStaff, selectedItemIdxs){
+  viewMode = viewMode || 'staff';
+  includeStaff = (includeStaff === undefined) ? true : includeStaff;
+  const { entries, uniforms, periodLabel, refYM } = getPiecesTableData();
+  const MONTHLY_LIMIT = 32, MONTHLY_WARN = 28;
+  const names = [...new Set(entries.map(e=>e.unionStaff).filter(Boolean))].sort();
+  const grandTotalAll = entries.reduce((s,e)=>s+e.grandTotal,0);
+
+  const showItems = selectedItemIdxs !== null && selectedItemIdxs !== undefined
+    ? uniforms.filter((_,i) => selectedItemIdxs.includes(i))
+    : uniforms;
+
+  const colTotals = showItems.map(u => entries.reduce((s,e)=>s+(e.items[u]||0),0));
+
+  const from = document.getElementById('pieces-date-from').value;
+  const to   = document.getElementById('pieces-date-to').value;
+  const staffFilter = document.getElementById('pieces-staff-search').value.trim();
+
+  // Build smart date display: if no filter, default to 1st of current month → today
+  const _today2 = new Date().toISOString().split('T')[0];
+  const _firstOfMonth2 = _today2.substring(0,8) + '01';
+  const dateDisplay = (from || to)
+    ? `${from ? fmtDate(from) : fmtDate(_firstOfMonth2)} → ${to ? fmtDate(to) : fmtDate(_today2)}`
+    : `${fmtDate(_firstOfMonth2)} → ${fmtDate(_today2)}`;
+
+  const locNames = [...new Set(entries.map(e=>e.location).filter(Boolean))];
+
+  let bodyHTML = '';
+
+  if(viewMode === 'totals'){
+    bodyHTML = `
+      <div class="print-header-bar">
+        <div class="print-logo">Union Camp <span>Laundry</span></div>
+      </div>
+      <div class="print-info-row">
+        <div class="pi"><strong>Date</strong>${dateDisplay}</div>
+        <div class="pi"><strong>Location(s)</strong>${locNames.length ? locNames.join(', ') : 'All'}</div>
+      </div>
+      <table class="print-table">
+        <thead><tr><th>Uniform Item</th><th style="text-align:center">Total Qty</th></tr></thead>
+        <tbody>
+          ${showItems.map((u,i)=>`<tr>
+            <td><strong>${u}</strong></td>
+            <td style="font-family:'DM Mono',monospace;font-weight:700;text-align:center">${colTotals[i]}</td>
+          </tr>`).join('')}
+        </tbody>
+        <tfoot><tr>
+          <td><strong>GRAND TOTAL</strong></td>
+          <td style="text-align:center;font-size:16px">${grandTotalAll}</td>
+        </tr></tfoot>
+      </table>`;
+  } else {
+    // STAFF SERIAL-WISE
+    let rowsHTML = '';
+    names.forEach(name=>{
+      const staffEntries = entries.filter(e=>e.unionStaff===name);
+      const locations = [...new Set(staffEntries.map(e=>e.location))];
+      locations.forEach((loc,li)=>{
+        const locRows = staffEntries.filter(e=>e.location===loc);
+        const itemQtys = showItems.map(u=>locRows.reduce((s,e)=>s+(e.items[u]||0),0));
+        const total = locRows.reduce((s,e)=>s+e.grandTotal,0);
+        const monthQty = getMonthlyTotal(name, loc, refYM, undefined);
+        let limitCell = '';
+        if(monthQty >= MONTHLY_LIMIT) limitCell = `<span style="color:#c0392b;font-weight:700">⛔ ${monthQty}/32 EXCEEDED</span>`;
+        else if(monthQty >= MONTHLY_WARN) limitCell = `<span style="color:#b45309;font-weight:700">⚠️ ${monthQty}/32 WARNING</span>`;
+        else limitCell = `<span style="color:#2e7d52;font-weight:600">✅ ${monthQty}/32</span>`;
+        rowsHTML += `<tr>
+          ${includeStaff ? (li===0 ? `<td rowspan="${locations.length}" style="vertical-align:top;padding-top:10px"><strong>${name}</strong></td>` : '') : ''}
+          <td>${loc}</td>
+          ${itemQtys.map(q=>`<td style="text-align:center;font-family:'DM Mono',monospace">${q||'—'}</td>`).join('')}
+          <td style="text-align:center;font-family:'DM Mono',monospace;font-weight:700">${total}</td>
+          <td style="text-align:center">${limitCell}</td>
+        </tr>`;
+      });
+    });
+
+    const colCount = (includeStaff ? 1 : 0) + 1 + showItems.length + 2;
+    bodyHTML = `
+      <div class="print-header-bar">
+        <div class="print-logo">Union Camp <span>Laundry</span></div>
+        <div class="print-meta" style="text-align:right;font-size:12px;color:var(--text-muted)">
+          <strong>Monthly Report — Staff Serial-wise</strong><br>
+          Printed: ${fmtDate(new Date().toISOString().split('T')[0])} &nbsp;|&nbsp; By: ${currentUser?.display||'—'}
+        </div>
+      </div>
+      <div class="print-info-row">
+        <div class="pi"><strong>Date</strong>${dateDisplay}</div>
+        <div class="pi"><strong>Location(s)</strong>${locNames.length ? locNames.join(', ') : 'All'}</div>
+      </div>
+      <table class="print-table">
+        <thead><tr>
+          ${includeStaff ? '<th>Union Staff</th>' : ''}
+          <th>Location</th>
+          ${showItems.map(u=>`<th>${u}</th>`).join('')}
+          <th>Total</th>
+          <th>Monthly Status</th>
+        </tr></thead>
+        <tbody>${rowsHTML || `<tr><td colspan="${colCount}" style="text-align:center;padding:20px;color:#999">No data for this period.</td></tr>`}</tbody>
+        <tfoot><tr>
+          ${includeStaff ? '<td></td>' : ''}
+          <td>TOTALS</td>
+          ${colTotals.map(t=>`<td style="text-align:center">${t}</td>`).join('')}
+          <td style="text-align:center">${grandTotalAll}</td>
+          <td></td>
+        </tr></tfoot>
+      </table>`;
+  }
+
+  document.getElementById('print-content').innerHTML = bodyHTML;
+  document.getElementById('print-preview-modal').classList.add('open');
+}
+
+// ── PRINT DASHBOARD ───────────────────────────
+function printDashboard(){
+  const entries = DB.entries;
+  const today = new Date().toISOString().split('T')[0];
+  const todayE = entries.filter(e=>e.date===today);
+  const tToday = todayE.reduce((s,e)=>s+e.grandTotal,0);
+  const tAll   = entries.reduce((s,e)=>s+e.grandTotal,0);
+  const recent = entries.slice(-10).reverse();
+  const now = new Date();
+  const printedAt = fmtDate(now.toISOString().split('T')[0]);
+
+  const rowsHTML = recent.length
+    ? recent.map((e,i)=>`<tr>
+        <td style="font-family:'Courier New',monospace">${fmtDate(e.date)}</td>
+        <td>${e.unionStaff}</td>
+        <td>${e.location}</td>
+        <td>${e.berkeleyStaff||'—'}</td>
+        <td style="font-family:'Courier New',monospace;font-weight:700;text-align:center">${e.grandTotal}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="5" style="text-align:center;padding:16px;color:#999">No entries yet.</td></tr>';
+
+  const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Dashboard Print</title>
+  <style>
+    @page { size: A4; margin: 15mm 12mm; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { font-family:'Courier New',Courier,monospace; font-size:12px; color:#000; background:#fff; }
+    .hdr { text-align:center; margin-bottom:10px; }
+    .hdr h1 { font-size:16px; font-weight:900; letter-spacing:1px; }
+    .hdr p  { font-size:10px; color:#555; }
+    .stats { display:flex; gap:8px; margin:10px 0; }
+    .stat  { flex:1; border:1px solid #ddd; padding:8px 10px; border-radius:4px; }
+    .stat .lbl { font-size:9px; text-transform:uppercase; color:#888; }
+    .stat .val { font-size:18px; font-weight:900; }
+    .div { border-top:1px solid #333; margin:8px 0; }
+    table { width:100%; border-collapse:collapse; margin-top:8px; font-size:11px; }
+    th { background:#1a3a5c; color:#fff; padding:6px 8px; text-align:left; }
+    td { padding:6px 8px; border-bottom:1px solid #eee; }
+    tr:nth-child(even) td { background:#f7f9fc; }
+    .footer { text-align:center; margin-top:12px; font-size:9px; color:#888; }
+  </style></head><body>
+  <div class="hdr"><h1>BERKELEY LAUNDRY — DASHBOARD</h1><p>Union Camp Management System &nbsp;|&nbsp; Printed: ${printedAt} &nbsp;|&nbsp; By: ${currentUser?.display||'—'}</p></div>
+  <div class="div"></div>
+  <div class="stats">
+    <div class="stat"><div class="lbl">Total Items All Time</div><div class="val">${tAll}</div><div style="font-size:9px;color:#888">${entries.length} submissions</div></div>
+    <div class="stat"><div class="lbl">Items Today</div><div class="val">${tToday}</div><div style="font-size:9px;color:#888">${todayE.length} today</div></div>
+    <div class="stat"><div class="lbl">Total Submissions</div><div class="val">${entries.length}</div></div>
+  </div>
+  <div class="div"></div>
+  <div style="font-size:12px;font-weight:700;margin-bottom:4px">Recent Submissions (Last 10)</div>
+  <table>
+    <thead><tr><th>Date</th><th>Union Staff</th><th>Location</th><th>Berkeley Staff</th><th style="text-align:center">Total Qty</th></tr></thead>
+    <tbody>${rowsHTML}</tbody>
+  </table>
+  <div class="footer">— End of Report —</div>
+  <script>window.onload=function(){setTimeout(()=>window.print(),300);};<\/script>
+  </body></html>`;
+
+  const win = window.open('','_blank','width=800,height=700,toolbar=0,menubar=0,location=0,scrollbars=1,resizable=1');
+  if(!win){ alert('Please allow popups for printing.'); return; }
+  win.document.open(); win.document.write(html); win.document.close();
+}
+
+// ── PRINT EDIT ENTRY ──────────────────────────
+function printEditEntry(){
+  const date = document.getElementById('edit-entry-date').value;
+  const loc  = document.getElementById('edit-entry-location').value;
+  const bs   = document.getElementById('edit-entry-berkeley').value;
+  const us   = document.getElementById('edit-entry-union-staff').value.trim();
+  const uniforms = DB.uniforms;
+  const items = []; let grand = 0;
+  uniforms.forEach((item,i)=>{ const v=parseInt(document.getElementById('edit-qty-'+i)?.value)||0; if(v>0){ items.push({name:item,qty:v}); grand+=v; } });
+  const data = { date, loc, bs, us, items, grand };
+  openThermalWindow(data);
+}
+
+// ── UTILS ─────────────────────────────────────
+function setCurrentDate(){ const now=new Date(); const m=String(now.getMonth()+1).padStart(2,'0'); const d=String(now.getDate()).padStart(2,'0'); const yy=String(now.getFullYear()).slice(-2); const days=['Sun','Mon','Tue','Wed','Thu','Fri','Sat']; document.getElementById('current-date').textContent=`${days[now.getDay()]} ${d}/${m}/${yy}`; }
+setCurrentDate();
+
+// ── SUPABASE KEY CHECK ─────────────────────────
+// Show a warning banner in Settings if the key is not a valid anon JWT
+(function checkSupaKey(){
+  if(!SUPA_KEY.startsWith('eyJ')){
+    // Show warning in settings page
+    const warn = document.getElementById('supa-key-warning');
+    if(warn) warn.style.display = 'block';
+    // Also show a persistent top-level warning on dashboard
+    setTimeout(()=>{
+      const dbWarn = document.getElementById('db-error-banner');
+      if(dbWarn){
+        document.getElementById('db-error-msg').textContent =
+          '⚠️ Wrong Supabase key (sb_publishable_...) — saves will fail with 401. Go to Settings page for fix instructions.';
+        dbWarn.style.display = 'flex';
+      }
+    }, 2000);
+  }
+})();
+</script>
+</body>
+</html>
