@@ -829,6 +829,10 @@ CREATE POLICY "allow_all" ON bk_store FOR ALL USING (true) WITH CHECK (true);</t
         </select>
       </div>
       <div class="fg">
+        <label>Customer VAT/TRN No. (Optional)</label>
+        <input type="text" id="inv-customer-trn" placeholder="Customer's TRN number" autocomplete="off">
+      </div>
+      <div class="fg">
         <label>Remarks / Notes</label>
         <input type="text" id="inv-remarks" placeholder="Optional">
       </div>
@@ -2194,6 +2198,7 @@ function openNewInvoice(){
   const nextPickup=invs.length===0?1:Math.max(...invs.map(i=>parseInt(i.pickup)||0))+1;
   document.getElementById('inv-pickup').value=String(nextPickup).padStart(4,'0');
   document.getElementById('inv-remarks').value='';
+  document.getElementById('inv-customer-trn').value='';
   document.getElementById('inv-discount').value='0';
   document.getElementById('inv-vat-pct').value='5';
 
@@ -2225,6 +2230,7 @@ function openEditInvoice(id){
   document.getElementById('inv-pickup-mode-label').textContent = '(Manual)';
   document.getElementById('inv-pickup').value=inv.pickup||'';
   document.getElementById('inv-remarks').value=inv.remarks||'';
+  document.getElementById('inv-customer-trn').value=inv.customerTrn||'';
   document.getElementById('inv-discount').value=inv.discountPct||0;
   document.getElementById('inv-vat-pct').value=(inv.vatPct!==undefined?inv.vatPct:5);
 
@@ -2412,6 +2418,7 @@ function saveInvoice(){
       pickup:document.getElementById('inv-pickup').value.trim(),
       driver:document.getElementById('inv-driver').value,
       remarks:existingRemarks,
+      customerTrn:document.getElementById('inv-customer-trn').value.trim(),
       changeLog:newChangeLog,
       items,discountPct:discPct,vatPct,subtotal,afterDiscount,vat,total,
     };
@@ -2427,6 +2434,7 @@ function saveInvoice(){
       pickup:document.getElementById('inv-pickup').value.trim(),
       driver:document.getElementById('inv-driver').value,
       remarks:document.getElementById('inv-remarks').value.trim(),
+      customerTrn:document.getElementById('inv-customer-trn').value.trim(),
       items,discountPct:discPct,vatPct,subtotal,afterDiscount,vat,total,
       status:'unpaid',paidDate:'',
     });
@@ -3606,10 +3614,8 @@ function _doPrint(id, docType){
         <div class="ti-service-text">${ciService.replace(' ','<br>')}</div>
       </div>
 
-      <!-- RIGHT: Pickup/Delivery No. box + TAX INVOICE label + inv number -->
+      <!-- RIGHT: TAX INVOICE label + inv number -->
       <div class="ti-inv-block">
-        <div class="ti-pickup-label">Pickup / Delivery No.</div>
-        <div class="ti-pickup-box">&nbsp;</div>
         <div class="ti-doc-label">${docLabel}</div>
         <div class="keep-color ti-inv-num">${inv.invNo}</div>
         <div class="ti-trn">TRN No: ${ciTrn}</div>
@@ -3629,7 +3635,7 @@ function _doPrint(id, docType){
         <span>Contact No: &nbsp;${inv.contact||'________________'} &nbsp;&nbsp;&nbsp; Time &nbsp;<span class="ti-cust-ar">وقت</span>: &nbsp;__________</span>
       </div>
       <div class="ti-cust-row">
-        <span>Customer TRN: &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;</span>
+        <span>Customer TRN: &nbsp;<strong>${inv.customerTrn||'________________________'}</strong></span>
         <span>Pickup/Delivery List No: &nbsp;<strong>${inv.pickup||''}</strong></span>
       </div>
     </div>
@@ -4014,8 +4020,8 @@ function handleExcelImport(e){
                 : false;
               if(choice){
                 // Merge: add invoices not already present (by invNo)
-                const existingNos = new Set(existing.map(i=>i.invNo));
-                const newInvs = (data.invoices||[]).filter(i=>!existingNos.has(i.invNo));
+                const existingNos = new Set(existing.map(i=>i.id));
+                const newInvs = (data.invoices||[]).filter(i=>!existingNos.has(i.id));
                 STORE.set('invoices', [...existing, ...newInvs]);
                 if(data.drivers && data.drivers.length) STORE.set('drivers', data.drivers);
                 if(data.rates) STORE.set('rates', data.rates);
