@@ -1692,7 +1692,7 @@ function renderDashboard(){
           <div style="display:flex;flex-direction:column;gap:3px">
             <div style="display:flex;gap:4px">
               <button class="btn btn-ghost btn-sm" type="button" onclick="printDO(${i.id})">🖨 DO</button>
-              <button class="btn btn-ghost btn-sm" style="margin-left:3px" type="button" onclick="printTaxInvoice(${i.id})" title="${i.invNo?'Print Invoice #'+i.invNo:'Generate & Print Invoice'}">🧾</button>
+              <button class="btn btn-ghost btn-sm" style="margin-left:3px" type="button" onclick="printTaxInvoice(${i.id})" title="${i.invNo?'Print Invoice #'+i.invNo:'Generate & Print Invoice'}">🧾${i.invNo?' #'+i.invNo:''}</button>
             </div>
             ${i.status==='cancelled'&&i.cancelRemarks?`<span style="font-size:10px;color:var(--orange);max-width:160px;white-space:normal;line-height:1.3">📝 ${i.cancelRemarks}${i.cancelDate?' ('+fmtDate(i.cancelDate)+')':''}</span>`:''}
           </div>
@@ -2106,6 +2106,7 @@ function renderInvRows(list){
         <div style="display:flex;gap:4px;flex-wrap:wrap;align-items:center">
           <button class="btn btn-ghost btn-sm" type="button" onclick="printDO(${inv.id})" title="Print Pickup/Delivery DO">🖨 DO</button>
           <button class="btn btn-ghost btn-sm" style="border-color:#999" type="button" onclick="printTaxInvoice(${inv.id})" title="Print Tax Invoice">🧾 TAX INV</button>
+          ${inv.invNo?`<span class="badge badge-gold" style="font-size:10px" title="Invoice generated">INV #${inv.invNo}</span>`:''}
           
           ${canEdit?`<button class="btn btn-ghost btn-sm" type="button" onclick="openEditInvoice(${inv.id})" title="Edit">✏️</button>`:''}
           ${canStatus?`<button class="btn btn-green btn-sm" type="button" onclick="markPaid(${inv.id})">✓ Paid</button>`:''}
@@ -3307,9 +3308,13 @@ function printDO(id){ _doPrint(id, 'salesorder'); }
 function printTaxInvoice(id){
   let invs=STORE.get('invoices');
   const idx=invs.findIndex(i=>i.id===id);
-  if(idx>-1 && !invs[idx].invNo){
+  if(idx===-1) return;
+  if(!invs[idx].invNo){
     const nextNo=invs.length===0?1:Math.max(...invs.map(i=>parseInt(i.invNo)||0))+1;
-    invs[idx]={...invs[idx], invNo:String(nextNo).padStart(4,'0')};
+    const previewNo=String(nextNo).padStart(4,'0');
+    const proceed=confirm(`No Tax Invoice has been generated yet for List No. "${invs[idx].pickup||'—'}".\n\nThis will assign and PERMANENTLY save Invoice No. ${previewNo} for this order.\n\nClick OK to save this invoice number and print, or Cancel to go back without printing.`);
+    if(!proceed) return;
+    invs[idx]={...invs[idx], invNo:previewNo};
     STORE.set('invoices',invs);
     if(document.getElementById('content')) renderPage(currentPage);
   }
@@ -3323,6 +3328,18 @@ function printSalesOrder(id){ _doPrint(id, 'salesorder'); }
 
 // Legacy alias
 function printInvoice(id){ _doPrint(id, 'salesorder'); }
+
+function applyPrintPageRule(mode){
+  let style = document.getElementById('dynamic-page-style');
+  if(!style){ style = document.createElement('style'); style.id='dynamic-page-style'; document.head.appendChild(style); }
+  if(mode==='tax'){
+    style.textContent = '@page { size: A4 portrait; margin: 12mm 12mm 14mm 12mm; }';
+  } else if(mode==='so'){
+    style.textContent = '@page { size: 80mm auto; margin: 3mm 4mm; }';
+  } else {
+    style.textContent = '@page { margin: 10mm; }';
+  }
+}
 
 function _doPrint(id, docType){
   // docType: 'taxinvoice' | 'salesorder' | false (DO)
@@ -3537,6 +3554,7 @@ function _doPrint(id, docType){
     pa.innerHTML=html;
     pa.style.display='block';
     document.body.classList.add('printing-invoice','print-mode-so');
+    applyPrintPageRule('so');
     window.print();
     setTimeout(()=>{
       pa.style.display='none';
@@ -3697,6 +3715,7 @@ function _doPrint(id, docType){
   pa.innerHTML=html;
   pa.style.display='block';
   document.body.classList.add('printing-invoice','print-mode-tax');
+  applyPrintPageRule('tax');
   window.print();
   setTimeout(()=>{
     pa.style.display='none';
