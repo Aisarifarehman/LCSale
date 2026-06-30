@@ -1665,7 +1665,7 @@ function renderDashboard(){
 
   <div class="card">
     <div class="section-label">Recent Orders</div>
-    <table><thead><tr><th>List No.</th><th>Date</th><th>Customer</th><th>Contact</th><th>Driver</th><th>Total</th><th>Status</th><th>Paid Date</th><th>Change Remarks</th><th>Action</th></tr></thead>
+    <table><thead><tr><th>DO No.</th><th>Date</th><th>Customer</th><th>Contact</th><th>Driver</th><th>Total</th><th>Status</th><th>Paid Date</th><th>Change Remarks</th><th>Action</th></tr></thead>
     <tbody>${invs.slice(-10).reverse().map(i=>{
       const cl=Array.isArray(i.changeLog)?i.changeLog:[];
       const clHtml=cl.length>0
@@ -2040,7 +2040,7 @@ function renderInvoices(){
     <button class="btn btn-gold" type="button" onclick="openNewInvoice()">+ New Order</button>
   </div>
   <div class="filter-bar">
-    <input type="text" id="fi-search" placeholder="🔍 Search customer / invoice no…" oninput="filterInv()">
+    <input type="text" id="fi-search" placeholder="🔍 Search customer / DO no…" oninput="filterInv()">
     <select id="fi-status" onchange="filterInv()">
       <option value="">All Status</option>
       <option value="unpaid">Unpaid</option>
@@ -2059,7 +2059,7 @@ function renderInvoices(){
     <div class="table-wrap">
       <table>
         <thead><tr>
-          <th>List No.</th><th>Date</th><th>Customer</th><th>Contact</th>
+          <th>DO No.</th><th>Date</th><th>Customer</th><th>Contact</th>
           <th>Subtotal</th><th>Disc</th><th>After Disc</th><th>VAT</th><th>Total</th>
           <th>Driver</th><th>Status</th><th>Paid Date</th><th>Change Remarks</th><th>Actions</th>
         </tr></thead>
@@ -2089,7 +2089,7 @@ function renderInvRows(list){
         }).join('')
       : '<span style="color:var(--faint);font-size:11px">—</span>';
     return `<tr style="${isCancelled?'opacity:.55':''}">
-      <td class="mono" style="font-weight:700;color:var(--gold)">${inv.invNo}</td>
+      <td class="mono" style="font-weight:700;color:var(--gold)">${inv.pickup||'—'}</td>
       <td>${fmtDate(inv.date)}</td>
       <td><strong>${inv.customer||''}</strong></td>
       <td style="font-size:12px;color:var(--muted)">${inv.contact||''}</td>
@@ -2640,7 +2640,7 @@ function viewDriverStatement(name, inline=false, customerFilter=''){
     </div>
     <div class="table-wrap">
       <table>
-        <thead><tr><th>List No.</th><th>Date</th><th>Customer</th><th>Subtotal</th><th>Disc%</th><th>VAT</th><th>TOTAL DUE</th><th>Action</th></tr></thead>
+        <thead><tr><th>DO No.</th><th>Date</th><th>Customer</th><th>Subtotal</th><th>Disc%</th><th>VAT</th><th>TOTAL DUE</th><th>Action</th></tr></thead>
         <tbody>
           ${unpaid.length===0?`<tr><td colspan="8" style="text-align:center;padding:28px;color:var(--muted)">No outstanding for ${name}</td></tr>`:
           unpaid.map(i=>`<tr>
