@@ -795,13 +795,7 @@ CREATE POLICY "allow_all" ON bk_store FOR ALL USING (true) WITH CHECK (true);</t
     <h3 id="inv-modal-title">📋 New Order</h3>
     <div class="form-grid">
       <div class="fg">
-        <label style="display:flex;align-items:center;justify-content:space-between;gap:8px">
-          <span>Invoice No. <span id="inv-no-mode-label">(Auto)</span></span>
-          <span style="display:flex;gap:10px;font-size:11px;font-weight:600;text-transform:none;letter-spacing:0">
-            <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="radio" name="inv-no-mode" value="auto" checked onchange="toggleInvNoMode()"> Auto</label>
-            <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="radio" name="inv-no-mode" value="manual" onchange="toggleInvNoMode()"> Manual (Bill Book)</label>
-          </span>
-        </label>
+        <label>Invoice No. (Auto)</label>
         <input type="text" id="inv-no" readonly style="color:var(--gold);font-family:var(--mono);font-weight:700">
       </div>
       <div class="fg">
@@ -822,7 +816,13 @@ CREATE POLICY "allow_all" ON bk_store FOR ALL USING (true) WITH CHECK (true);</t
         <input type="text" id="inv-address" placeholder="Customer address" autocomplete="off">
       </div>
       <div class="fg">
-        <label>Pickup/Delivery List No.</label>
+        <label style="display:flex;align-items:center;justify-content:space-between;gap:8px">
+          <span>Pickup/Delivery List No. <span id="inv-pickup-mode-label">(Auto)</span></span>
+          <span style="display:flex;gap:10px;font-size:11px;font-weight:600;text-transform:none;letter-spacing:0">
+            <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="radio" name="inv-pickup-mode" value="auto" checked onchange="togglePickupNoMode()"> Auto</label>
+            <label style="display:flex;align-items:center;gap:4px;cursor:pointer"><input type="radio" name="inv-pickup-mode" value="manual" onchange="togglePickupNoMode()"> Manual (Bill Book)</label>
+          </span>
+        </label>
         <input type="text" id="inv-pickup" placeholder="List number">
       </div>
       <div class="fg">
@@ -2154,12 +2154,11 @@ function clearInvFilters(){
   filterInv();
 }
 
-function toggleInvNoMode(){
-  const mode = document.querySelector('input[name="inv-no-mode"]:checked').value;
-  const field = document.getElementById('inv-no');
-  const lbl = document.getElementById('inv-no-mode-label');
+function togglePickupNoMode(){
+  const mode = document.querySelector('input[name="inv-pickup-mode"]:checked').value;
+  const field = document.getElementById('inv-pickup');
+  const lbl = document.getElementById('inv-pickup-mode-label');
   if(mode==='manual'){
-    field.readOnly = false;
     field.style.color = 'var(--text)';
     field.style.background = 'var(--bg)';
     field.value = '';
@@ -2167,13 +2166,12 @@ function toggleInvNoMode(){
     lbl.textContent = '(Manual)';
     field.focus();
   } else {
-    field.readOnly = true;
-    field.style.color = 'var(--gold)';
+    field.style.color = '';
     field.style.background = '';
     field.placeholder = '';
     lbl.textContent = '(Auto)';
     const invs=STORE.get('invoices');
-    const nextNo=invs.length===0?1:Math.max(...invs.map(i=>parseInt(i.invNo)||0))+1;
+    const nextNo=invs.length===0?1:Math.max(...invs.map(i=>parseInt(i.pickup)||0))+1;
     field.value=String(nextNo).padStart(4,'0');
   }
 }
@@ -2185,11 +2183,6 @@ function openNewInvoice(){
   editingInvId=null;
   document.getElementById('inv-modal-title').textContent='📋 New Order';
   document.getElementById('inv-save-btn').textContent='💾 Save DO';
-  document.querySelector('input[name="inv-no-mode"][value="auto"]').checked = true;
-  document.getElementById('inv-no').readOnly = true;
-  document.getElementById('inv-no').style.color = 'var(--gold)';
-  document.getElementById('inv-no').style.background = '';
-  document.getElementById('inv-no-mode-label').textContent = '(Auto)';
   const invs=STORE.get('invoices');
   const nextNo=invs.length===0?1:Math.max(...invs.map(i=>parseInt(i.invNo)||0))+1;
   document.getElementById('inv-no').value=String(nextNo).padStart(4,'0');
@@ -2197,7 +2190,12 @@ function openNewInvoice(){
   document.getElementById('inv-customer').value='';
   document.getElementById('inv-contact').value='';
   document.getElementById('inv-address').value='';
-  document.getElementById('inv-pickup').value='';
+  document.querySelector('input[name="inv-pickup-mode"][value="auto"]').checked = true;
+  document.getElementById('inv-pickup').style.color = '';
+  document.getElementById('inv-pickup').style.background = '';
+  document.getElementById('inv-pickup-mode-label').textContent = '(Auto)';
+  const nextPickup=invs.length===0?1:Math.max(...invs.map(i=>parseInt(i.pickup)||0))+1;
+  document.getElementById('inv-pickup').value=String(nextPickup).padStart(4,'0');
   document.getElementById('inv-remarks').value='';
   document.getElementById('inv-discount').value='0';
   document.getElementById('inv-vat-pct').value='5';
@@ -2219,16 +2217,15 @@ function openEditInvoice(id){
   editingInvId=id;
   document.getElementById('inv-modal-title').textContent='✏️ Edit Invoice #'+inv.invNo;
   document.getElementById('inv-save-btn').textContent='💾 Update DO';
-  document.querySelector('input[name="inv-no-mode"][value="manual"]').checked = true;
-  document.getElementById('inv-no').readOnly = false;
-  document.getElementById('inv-no').style.color = 'var(--text)';
-  document.getElementById('inv-no').style.background = 'var(--bg)';
-  document.getElementById('inv-no-mode-label').textContent = '(Manual)';
   document.getElementById('inv-no').value=inv.invNo;
   document.getElementById('inv-date').value=inv.date||'';
   document.getElementById('inv-customer').value=(inv.customer||'').toUpperCase();
   document.getElementById('inv-contact').value=inv.contact||'';
   document.getElementById('inv-address').value=inv.address||'';
+  document.querySelector('input[name="inv-pickup-mode"][value="manual"]').checked = true;
+  document.getElementById('inv-pickup').style.color = 'var(--text)';
+  document.getElementById('inv-pickup').style.background = 'var(--bg)';
+  document.getElementById('inv-pickup-mode-label').textContent = '(Manual)';
   document.getElementById('inv-pickup').value=inv.pickup||'';
   document.getElementById('inv-remarks').value=inv.remarks||'';
   document.getElementById('inv-discount').value=inv.discountPct||0;
@@ -2353,11 +2350,11 @@ function collectItems(){
 function saveInvoice(){
   const customer=document.getElementById('inv-customer').value.trim().toUpperCase();
   if(!customer){alert('Please enter customer name.');return}
-  const invNoVal=document.getElementById('inv-no').value.trim();
-  if(!invNoVal){alert('Please enter an Invoice No. (or switch to Auto mode).');return}
+  const pickupVal=document.getElementById('inv-pickup').value.trim();
+  if(!pickupVal){alert('Please enter a Pickup/Delivery List No. (or switch to Auto mode).');return}
   const dupCheckInvs=STORE.get('invoices');
-  const dup=dupCheckInvs.find(i=>i.invNo===invNoVal && i.id!==editingInvId);
-  if(dup){alert('⚠️ Invoice No. "'+invNoVal+'" already exists. Please use a different number.');return}
+  const dup=dupCheckInvs.find(i=>i.pickup===pickupVal && i.id!==editingInvId);
+  if(dup){alert('⚠️ Pickup/Delivery List No. "'+pickupVal+'" already exists. Please use a different number.');return}
   const items=collectItems();
   const discPct=parseFloat(document.getElementById('inv-discount').value)||0;
   const vatPct=parseFloat(document.getElementById('inv-vat-pct').value)||0;
