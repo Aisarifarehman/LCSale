@@ -760,7 +760,7 @@ CREATE POLICY "allow_all" ON bk_store FOR ALL USING (true) WITH CHECK (true);</t
       <div id="sync-bar"><span class="sync-dot"></span><span id="sync-txt">Connecting…</span></div>
       <span id="topbar-user" style="font-size:12px;color:var(--muted)"></span>
       <span id="role-badge" style="font-size:11px;background:var(--surf2);padding:4px 10px;border-radius:4px;border:1px solid var(--border)"></span>
-      <button class="btn btn-gold btn-sm admin-only" onclick="exportToExcel()" title="Export all data to Excel">⬇ Excel</button>
+      <button class="btn btn-gold btn-sm" onclick="exportToExcel()" title="Export all data to Excel">⬇ Excel</button>
       <button class="btn btn-ghost btn-sm" id="switch-to-admin-btn" onclick="switchToAdmin()" title="Switch to Admin Mode" style="display:none;border-color:var(--gold);color:var(--gold)">👑 Admin</button>
       <button class="btn btn-ghost btn-sm" id="switch-to-staff-btn" onclick="switchToStaff()" title="Switch to Staff Mode" style="display:none;border-color:var(--blue);color:var(--blue)">👤 Staff</button>
       <button class="btn btn-red btn-sm" onclick="doLogout()">⏻ Logout</button>
@@ -2629,7 +2629,7 @@ function confirmDelete(id,type){
 function renderDrivers(){
   const drivers=STORE.get('drivers');
   const invs=STORE.get('invoices');
-  const addBtn = isAdmin() ? `<button class="btn btn-gold" type="button" onclick="openAddDriver()">+ Add Driver</button>` : '';
+  const addBtn = `<button class="btn btn-gold" type="button" onclick="openAddDriver()">+ Add Driver</button>`;
   return `
   <div class="page-header">
     <div class="page-title">👤 Drivers & Staff</div>
@@ -2639,7 +2639,7 @@ function renderDrivers(){
     ${drivers.map(d=>{
       const dInvs=invs.filter(i=>i.driver===d.name&&i.status==='unpaid');
       const total=dInvs.reduce((s,i)=>s+(i.total||0),0);
-      const removeBtn = isAdmin() ? `<button class="btn btn-red btn-sm" type="button" onclick="event.stopPropagation();confirmDeleteDriver(${d.id})">Remove</button>` : '';
+      const removeBtn = `<button class="btn btn-red btn-sm" type="button" onclick="event.stopPropagation();confirmDeleteDriver(${d.id})">Remove</button>`;
       return `<div class="card" style="cursor:pointer" onclick="viewDriverStatement('${d.name}')">
         <div style="font-size:15px;font-weight:700;margin-bottom:8px">👤 ${d.name}</div>
         ${d.phone?`<div style="font-size:12px;color:var(--muted);margin-bottom:4px">📞 ${d.phone}</div>`:''}
@@ -2648,7 +2648,7 @@ function renderDrivers(){
         <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Due: <strong style="color:var(--red)">AED ${fmt(total)}</strong></div>
         <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-ghost btn-sm" type="button" onclick="event.stopPropagation();viewDriverStatement('${d.name}')">Statement</button>
-          ${isAdmin()?`<button class="btn btn-ghost btn-sm" type="button" onclick="event.stopPropagation();openEditDriver(${d.id})" style="border-color:var(--gold);color:var(--gold)">✏️ Edit</button>`:''}
+          <button class="btn btn-ghost btn-sm" type="button" onclick="event.stopPropagation();openEditDriver(${d.id})" style="border-color:var(--gold);color:var(--gold)">✏️ Edit</button>
           ${removeBtn}
         </div>
       </div>`;
@@ -2659,7 +2659,7 @@ function renderDrivers(){
 let _editingDriverId = null;
 
 function openAddDriver(){
-  if(isStaff()){alert('⛔ Adding drivers is restricted to admin only.');return;}
+  // Staff allowed to manage drivers
   _editingDriverId = null;
   document.getElementById('drv-modal-title').textContent = '👤 Add Driver / Staff';
   ['drv-name','drv-phone','drv-notes'].forEach(id=>document.getElementById(id).value='');
@@ -2670,7 +2670,7 @@ function openAddDriver(){
 }
 
 function openEditDriver(id){
-  if(isStaff()){alert('⛔ Editing drivers is restricted to admin only.');return;}
+  // Staff allowed to edit drivers
   const driver = STORE.get('drivers').find(d=>d.id===id);
   if(!driver) return;
   _editingDriverId = id;
@@ -2685,7 +2685,7 @@ function openEditDriver(id){
 }
 
 function saveDriver(){
-  if(isStaff()){alert('⛔ Adding drivers is restricted to admin only.');return;}
+  // Staff allowed to manage drivers
   let drivers = STORE.get('drivers');
   if(_editingDriverId){
     // Edit mode — update phone and notes only
@@ -2710,7 +2710,7 @@ function saveDriver(){
 }
 
 function confirmDeleteDriver(id){
-  if(isStaff()){alert('⛔ Removing drivers is restricted to admin only.');return;}
+  // Staff allowed to remove drivers
   const driver=STORE.get('drivers').find(d=>d.id===id);
   if(!confirm(`Remove driver "${driver?.name}"?`)) return;
   STORE.set('drivers',STORE.get('drivers').filter(d=>d.id!==id));
@@ -3338,7 +3338,7 @@ function renderSettings(){
     <div class="card">
       <div class="section-label">Danger Zone</div>
       <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Completely erase all data. Requires admin password.</p>
-      <button class="btn btn-red" type="button" onclick="clearAllData()">🗑 Erase All Data</button>
+      <button class="btn btn-red" type="button" onclick="openEraseModal()">🗑 Erase Data...</button>
     </div>
     <div class="card full" style="grid-column:1/-1">
       <div class="section-label">Role Permissions Summary</div>
@@ -3984,7 +3984,6 @@ function initCompanyPreview(){
 
 // ── EXCEL EXPORT (multi-sheet) ──────────────────────────────────────────────
 function exportToExcel(){
-  if(isStaff()){alert('⛔ Data export is restricted to admin only.');return;}
   if(typeof ExcelJS==='undefined'){alert('⚠️ Excel library not loaded. Please check your internet connection.');return;}
 
   const invs   = STORE.get('invoices') || [];
@@ -4352,7 +4351,6 @@ function exportToExcel(){
 
 // ── JSON BACKUP EXPORT (secondary safety) ──
 function exportJSONBackup(){
-  if(isStaff()){alert('⛔ Restricted to admin only.');return;}
   const data={invoices:STORE.get('invoices'),drivers:STORE.get('drivers'),rates:STORE.get('rates'),version:'v9',exportDate:new Date().toISOString()};
   const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
   const url=URL.createObjectURL(blob);
@@ -4478,17 +4476,59 @@ function handleExcelImport(e){
   e.target.value='';
 }
 
-function clearAllData(){
+function openEraseModal(){
   if(isStaff()){alert('⛔ Restricted to admin only.');return;}
-  const p=prompt('Enter admin password to erase ALL data:');
+  // Reset all checkboxes
+  ['erase-unpaid','erase-cancelled','erase-paid','erase-drivers','erase-rates'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.checked=false;
+  });
+  openModal('erase-modal');
+}
+
+function confirmSelectiveErase(){
+  const delUnpaid    = document.getElementById('erase-unpaid')?.checked;
+  const delCancelled = document.getElementById('erase-cancelled')?.checked;
+  const delPaid      = document.getElementById('erase-paid')?.checked;
+  const delDrivers   = document.getElementById('erase-drivers')?.checked;
+  const delRates     = document.getElementById('erase-rates')?.checked;
+
+  if(!delUnpaid && !delCancelled && !delPaid && !delDrivers && !delRates){
+    alert('Please select at least one item to delete.');
+    return;
+  }
+
+  // Build summary of what will be deleted
+  const summary = [];
+  if(delUnpaid)    summary.push('All UNPAID invoices');
+  if(delCancelled) summary.push('All CANCELLED invoices');
+  if(delPaid)      summary.push('All PAID invoices ⚠️');
+  if(delDrivers)   summary.push('All Driver / Staff records');
+  if(delRates)     summary.push('All Item Rates (reset to zero)');
+
+  const p = prompt(`You are about to permanently delete:\n\n• ${summary.join('\n• ')}\n\nType your admin password to confirm:`);
   if(!p) return;
-  const cred=STORE.get('credentials');
-  if(hashPw(p)!==cred.password){alert('Wrong password.');return}
-  if(!confirm('FINAL WARNING: ALL invoices and driver data will be permanently deleted!')) return;
-  STORE.set('invoices',[]);
-  STORE.set('drivers',[{id:1,name:'GAZAN',phone:'',notes:''},{id:2,name:'ZAHIR',phone:'',notes:''},{id:3,name:'RATAN',phone:'',notes:''}]);
+  const cred = STORE.get('credentials');
+  if(hashPw(p) !== cred.password){ alert('Wrong password. Nothing was deleted.'); return; }
+
+  if(!confirm(`FINAL WARNING!\n\nThis will permanently delete:\n• ${summary.join('\n• ')}\n\nThis CANNOT be undone. Proceed?`)) return;
+
+  // Execute deletions
+  let invs = STORE.get('invoices') || [];
+  if(delUnpaid)    invs = invs.filter(i=>i.status !== 'unpaid');
+  if(delCancelled) invs = invs.filter(i=>i.status !== 'cancelled');
+  if(delPaid)      invs = invs.filter(i=>i.status !== 'paid');
+  STORE.set('invoices', invs);
+
+  if(delDrivers) STORE.set('drivers', []);
+  if(delRates)   STORE.set('rates', {});
+
+  closeModal('erase-modal');
   renderPage(currentPage);
-  alert('All data cleared.');
+  alert(`✅ Done! Deleted:\n• ${summary.join('\n• ')}`);
+}
+
+function clearAllData(){
+  openEraseModal();
 }
 
 // ════════════════════════════════════════
@@ -4575,6 +4615,43 @@ document.addEventListener('DOMContentLoaded',()=>{
   <span>⚠️ <span id="backup-banner-msg">No backup taken yet</span></span>
   <button onclick="exportJSONBackup()" style="background:#fff;color:#92400e;border:none;border-radius:5px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer">Backup Now</button>
   <button onclick="document.getElementById('backup-banner').style.display='none'" style="background:transparent;border:none;color:#fff;font-size:16px;cursor:pointer;padding:0 4px">✕</button>
+</div>
+
+<!-- Selective Erase Modal -->
+<div class="overlay" id="erase-modal">
+  <div class="modal" style="width:480px">
+    <h3 style="color:var(--red)">🗑 Erase Data — Select What to Delete</h3>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:18px">Select exactly what you want to permanently delete. <strong>This cannot be undone.</strong> Take a backup first if needed.</p>
+    <div style="display:flex;flex-direction:column;gap:10px;margin-bottom:20px">
+      <label style="display:flex;align-items:flex-start;gap:10px;padding:12px;background:var(--surf2);border:1px solid var(--border);border-radius:8px;cursor:pointer">
+        <input type="checkbox" id="erase-unpaid" style="width:16px;height:16px;margin-top:2px;accent-color:var(--red)">
+        <div><div style="font-weight:700;font-size:13px">Unpaid Invoices / Entries</div><div style="font-size:12px;color:var(--muted)">Delete all orders with status UNPAID</div></div>
+      </label>
+      <label style="display:flex;align-items:flex-start;gap:10px;padding:12px;background:var(--surf2);border:1px solid var(--border);border-radius:8px;cursor:pointer">
+        <input type="checkbox" id="erase-cancelled" style="width:16px;height:16px;margin-top:2px;accent-color:var(--red)">
+        <div><div style="font-weight:700;font-size:13px">Cancelled Entries</div><div style="font-size:12px;color:var(--muted)">Delete all orders with status CANCELLED</div></div>
+      </label>
+      <label style="display:flex;align-items:flex-start;gap:10px;padding:12px;background:#fff5f5;border:1px solid #fca5a5;border-radius:8px;cursor:pointer">
+        <input type="checkbox" id="erase-paid" style="width:16px;height:16px;margin-top:2px;accent-color:var(--red)">
+        <div><div style="font-weight:700;font-size:13px;color:var(--red)">Paid Invoices ⚠️</div><div style="font-size:12px;color:var(--muted)">Delete all orders with status PAID — these are payment records</div></div>
+      </label>
+      <label style="display:flex;align-items:flex-start;gap:10px;padding:12px;background:var(--surf2);border:1px solid var(--border);border-radius:8px;cursor:pointer">
+        <input type="checkbox" id="erase-drivers" style="width:16px;height:16px;margin-top:2px;accent-color:var(--red)">
+        <div><div style="font-weight:700;font-size:13px">Driver / Staff List</div><div style="font-size:12px;color:var(--muted)">Remove all drivers from the system (keeps invoices intact)</div></div>
+      </label>
+      <label style="display:flex;align-items:flex-start;gap:10px;padding:12px;background:var(--surf2);border:1px solid var(--border);border-radius:8px;cursor:pointer">
+        <input type="checkbox" id="erase-rates" style="width:16px;height:16px;margin-top:2px;accent-color:var(--red)">
+        <div><div style="font-weight:700;font-size:13px">Item Rates</div><div style="font-size:12px;color:var(--muted)">Reset all item prices back to zero</div></div>
+      </label>
+    </div>
+    <div style="background:#fff3cd;border:1px solid #ffc107;border-radius:7px;padding:10px 14px;font-size:12px;color:#92400e;margin-bottom:16px">
+      ⚠️ <strong>Note:</strong> Paid invoices cannot normally be deleted to protect payment records. Tick the box above only if you are absolutely certain.
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-ghost" type="button" onclick="closeModal('erase-modal')">Cancel</button>
+      <button class="btn btn-red" type="button" onclick="confirmSelectiveErase()">🗑 Delete Selected</button>
+    </div>
+  </div>
 </div>
 
 </body>
