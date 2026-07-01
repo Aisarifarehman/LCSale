@@ -903,10 +903,14 @@ CREATE POLICY "allow_all" ON bk_store FOR ALL USING (true) WITH CHECK (true);</t
 <!-- ═══════════════════════════════════ DRIVER MODAL ═══════════════════════════════════ -->
 <div class="overlay" id="drv-modal">
   <div class="modal" style="width:400px">
-    <h3>👤 Add Driver / Staff</h3>
+    <h3 id="drv-modal-title">👤 Add Driver / Staff</h3>
     <div class="form-grid form-1">
-      <div class="fg"><label>Name</label><input type="text" id="drv-name" placeholder="Full name"></div>
-      <div class="fg"><label>Phone</label><input type="text" id="drv-phone" placeholder="+971..."></div>
+      <div class="fg">
+        <label>Name</label>
+        <input type="text" id="drv-name" placeholder="Full name">
+        <div id="drv-name-lock-note" style="display:none;font-size:11px;color:var(--muted);margin-top:3px">🔒 Name cannot be changed (linked to invoices)</div>
+      </div>
+      <div class="fg"><label>Phone / Mobile</label><input type="text" id="drv-phone" placeholder="+971..."></div>
       <div class="fg"><label>Notes</label><input type="text" id="drv-notes" placeholder="Optional"></div>
     </div>
     <div class="modal-footer">
@@ -1005,6 +1009,24 @@ CREATE POLICY "allow_all" ON bk_store FOR ALL USING (true) WITH CHECK (true);</t
   <div class="modal" style="width:620px">
     <h3>🏢 Company / Invoice Header Settings</h3>
     <div class="form-grid form-1" style="gap:12px">
+      <!-- LOGO UPLOAD -->
+      <div class="fg">
+        <label>Company Logo (shown on Tax Invoice & DO)</label>
+        <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap">
+          <div id="ci-logo-preview" style="width:80px;height:60px;border:1.5px dashed var(--border);border-radius:6px;display:flex;align-items:center;justify-content:center;background:var(--surf2);overflow:hidden;flex-shrink:0">
+            <span id="ci-logo-placeholder" style="font-size:11px;color:var(--muted);text-align:center">No Logo</span>
+            <img id="ci-logo-img" style="display:none;max-width:80px;max-height:60px;object-fit:contain" />
+          </div>
+          <div style="display:flex;flex-direction:column;gap:6px">
+            <label class="btn btn-ghost btn-sm" style="cursor:pointer;margin:0">
+              📁 Upload Logo
+              <input type="file" id="ci-logo-file" accept="image/*" style="display:none" onchange="handleLogoUpload(this)">
+            </label>
+            <button class="btn btn-ghost btn-sm" type="button" onclick="removeLogo()" style="color:var(--red);border-color:var(--red)">✕ Remove Logo</button>
+          </div>
+          <div style="font-size:11px;color:var(--muted);line-height:1.5">PNG, JPG, SVG<br>Recommended: 200×80px</div>
+        </div>
+      </div>
       <div class="fg"><label>Company Name (Main, shown large)</label><input type="text" id="ci-name" placeholder="Your Company Name"></div>
       <div class="fg"><label>Tagline / Slogan (below company name)</label><input type="text" id="ci-tagline" placeholder="DEFINED BY TRUST"></div>
       <div class="fg"><label>Full Legal Name (e.g. LLC name)</label><input type="text" id="ci-legal" placeholder="Your Legal Company Name"></div>
@@ -1400,6 +1422,28 @@ function doLogin(){
   setTimeout(()=>document.getElementById('login-err').textContent='',3000);
 }
 
+function updateBackupBanner(){
+  if(!isAdmin()) return;
+  const lastBackup = localStorage.getItem('lcs_last_backup');
+  const banner = document.getElementById('backup-banner');
+  const msg = document.getElementById('backup-banner-msg');
+  if(!banner || !msg) return;
+  if(!lastBackup){
+    msg.textContent = 'No backup taken yet — please take a backup!';
+    banner.style.display = 'flex';
+    banner.style.background = '#991b1b';
+    return;
+  }
+  const days = Math.floor((Date.now() - new Date(lastBackup).getTime()) / (1000*60*60*24));
+  if(days >= 7){
+    msg.textContent = `Last backup: ${days} day${days!==1?'s':''} ago — time to backup!`;
+    banner.style.display = 'flex';
+    banner.style.background = days >= 14 ? '#991b1b' : '#92400e';
+  } else {
+    banner.style.display = 'none';
+  }
+}
+
 function loginSuccess(){
   document.getElementById('login-screen').style.display='none';
   document.getElementById('app').classList.add('visible');
@@ -1428,6 +1472,7 @@ function loginSuccess(){
   }
   nav('dashboard');
   startPresenceTracking();
+  updateBackupBanner();
 }
 
 // ════════════════════════════════════════
@@ -2562,10 +2607,12 @@ function renderDrivers(){
       return `<div class="card" style="cursor:pointer" onclick="viewDriverStatement('${d.name}')">
         <div style="font-size:15px;font-weight:700;margin-bottom:8px">👤 ${d.name}</div>
         ${d.phone?`<div style="font-size:12px;color:var(--muted);margin-bottom:4px">📞 ${d.phone}</div>`:''}
+        ${d.notes?`<div style="font-size:11px;color:var(--muted);margin-bottom:4px">📝 ${d.notes}</div>`:''}
         <div style="font-size:12px;color:var(--muted)">Outstanding: <strong style="color:var(--red)">${dInvs.length} invoice(s)</strong></div>
         <div style="font-size:12px;color:var(--muted);margin-bottom:12px">Due: <strong style="color:var(--red)">AED ${fmt(total)}</strong></div>
-        <div style="display:flex;gap:8px">
+        <div style="display:flex;gap:8px;flex-wrap:wrap">
           <button class="btn btn-ghost btn-sm" type="button" onclick="event.stopPropagation();viewDriverStatement('${d.name}')">Statement</button>
+          ${isAdmin()?`<button class="btn btn-ghost btn-sm" type="button" onclick="event.stopPropagation();openEditDriver(${d.id})" style="border-color:var(--gold);color:var(--gold)">✏️ Edit</button>`:''}
           ${removeBtn}
         </div>
       </div>`;
@@ -2573,20 +2620,55 @@ function renderDrivers(){
   </div>`;
 }
 
+let _editingDriverId = null;
+
 function openAddDriver(){
   if(isStaff()){alert('⛔ Adding drivers is restricted to admin only.');return;}
+  _editingDriverId = null;
+  document.getElementById('drv-modal-title').textContent = '👤 Add Driver / Staff';
   ['drv-name','drv-phone','drv-notes'].forEach(id=>document.getElementById(id).value='');
+  document.getElementById('drv-name').readOnly = false;
+  document.getElementById('drv-name').style.background = '';
+  document.getElementById('drv-name-lock-note').style.display = 'none';
+  openModal('drv-modal');
+}
+
+function openEditDriver(id){
+  if(isStaff()){alert('⛔ Editing drivers is restricted to admin only.');return;}
+  const driver = STORE.get('drivers').find(d=>d.id===id);
+  if(!driver) return;
+  _editingDriverId = id;
+  document.getElementById('drv-modal-title').textContent = `✏️ Edit — ${driver.name}`;
+  document.getElementById('drv-name').value = driver.name;
+  document.getElementById('drv-name').readOnly = true;
+  document.getElementById('drv-name').style.background = 'var(--surf2)';
+  document.getElementById('drv-name-lock-note').style.display = 'block';
+  document.getElementById('drv-phone').value = driver.phone || '';
+  document.getElementById('drv-notes').value = driver.notes || '';
   openModal('drv-modal');
 }
 
 function saveDriver(){
   if(isStaff()){alert('⛔ Adding drivers is restricted to admin only.');return;}
-  const name=document.getElementById('drv-name').value.trim().toUpperCase();
+  let drivers = STORE.get('drivers');
+  if(_editingDriverId){
+    // Edit mode — update phone and notes only
+    const idx = drivers.findIndex(d=>d.id===_editingDriverId);
+    if(idx>-1){
+      drivers[idx].phone = document.getElementById('drv-phone').value.trim();
+      drivers[idx].notes = document.getElementById('drv-notes').value.trim();
+    }
+    STORE.set('drivers', drivers);
+    closeModal('drv-modal');
+    renderPage('drivers');
+    return;
+  }
+  // Add mode
+  const name = document.getElementById('drv-name').value.trim().toUpperCase();
   if(!name){alert('Enter name.');return}
-  let drivers=STORE.get('drivers');
   if(drivers.find(d=>d.name===name)){alert('Already exists.');return}
-  drivers.push({id:Date.now(),name,phone:document.getElementById('drv-phone').value.trim(),notes:document.getElementById('drv-notes').value.trim()});
-  STORE.set('drivers',drivers);
+  drivers.push({id:Date.now(), name, phone:document.getElementById('drv-phone').value.trim(), notes:document.getElementById('drv-notes').value.trim()});
+  STORE.set('drivers', drivers);
   closeModal('drv-modal');
   renderPage('drivers');
 }
@@ -3349,6 +3431,12 @@ function applyPrintPageRule(mode){
   }
 }
 
+function _logoHtml(src, name, tagline){
+  return '<img src="'+src+'" style="max-height:50pt;max-width:140pt;object-fit:contain;display:block;margin-bottom:2px">'
+    + (tagline ? '<div class="ti-defined">'+tagline+'</div>' : '')
+    + (name ? '<div class="ti-logo-name" style="font-size:11pt">'+name+'</div>' : '');
+}
+
 function _doPrint(id, docType){
   // docType: 'taxinvoice' | 'salesorder' | false (DO)
   const isTaxInvoice = docType==='taxinvoice';
@@ -3370,6 +3458,7 @@ function _doPrint(id, docType){
   const ciEmail = ci.email || '';
   const ciTrn = ci.trn || '100029720800003';
   const ciService = ci.service || 'LAUNDRY SERVICES';
+  const ciLogo = localStorage.getItem('lcs_company_logo') || '';
 
   const items=inv.items||{};
   const vatPct = (inv.vatPct !== undefined) ? inv.vatPct : 5;
@@ -3590,12 +3679,9 @@ function _doPrint(id, docType){
       <!-- LEFT: Company logo + address -->
       <div>
         <div style="margin-bottom:2px">
-          <span class="ti-logo-bars">
-            <span></span><span></span><span></span><span></span>
-          </span>
-          <span class="ti-logo-name">${ciName}</span>
+          ${ciLogo ? _logoHtml(ciLogo,ciName,ciTagline) : '<span class="ti-logo-bars"><span></span><span></span><span></span><span></span></span><span class="ti-logo-name">'+ciName+'</span>'}
         </div>
-        <div class="ti-defined">${ciTagline}</div>
+        ${!ciLogo ? '<div class="ti-defined">'+ciTagline+'</div>' : ''}
         <div class="ti-legal">${ciLegal}</div>
         <div class="ti-legal-ar">${ciArabic}</div>
         <div class="ti-addr">
@@ -3747,6 +3833,41 @@ function openCompanyModal(){
   document.getElementById('ci-trn').value = ci.trn || '100029720800003';
   document.getElementById('ci-service').value = ci.service || 'LAUNDRY SERVICES';
   openModal('company-modal');
+  // Load logo preview
+  const savedLogo = localStorage.getItem('lcs_company_logo');
+  _renderLogoPreview(savedLogo||null);
+}
+
+function handleLogoUpload(input){
+  const file = input.files[0]; if(!file) return;
+  if(file.size > 500000){ alert('⚠️ Logo file is too large. Please use an image under 500KB.'); return; }
+  const reader = new FileReader();
+  reader.onload = e => {
+    const dataUrl = e.target.result;
+    localStorage.setItem('lcs_company_logo', dataUrl);
+    _renderLogoPreview(dataUrl);
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeLogo(){
+  localStorage.removeItem('lcs_company_logo');
+  _renderLogoPreview(null);
+}
+
+function _renderLogoPreview(dataUrl){
+  const img = document.getElementById('ci-logo-img');
+  const placeholder = document.getElementById('ci-logo-placeholder');
+  if(!img || !placeholder) return;
+  if(dataUrl){
+    img.src = dataUrl;
+    img.style.display = 'block';
+    placeholder.style.display = 'none';
+  } else {
+    img.style.display = 'none';
+    img.src = '';
+    placeholder.style.display = 'block';
+  }
 }
 
 function saveCompanyInfo(){
@@ -3807,11 +3928,11 @@ function exportToExcel(){
   const fd = d => { if(!d) return ''; try{ const [y,m,dd]=d.split('-'); return `${dd}/${m}/${y}`; }catch{return s(d);} };
 
   // ── SHEET 1: All Invoices ──
-  const invHeader = ['INV NO','DATE','CUSTOMER','CONTACT','ADDRESS','DRIVER','SUBTOTAL (AED)','DISC %','DISC AMT (AED)','AFTER DISC (AED)','VAT % ','VAT AMT (AED)','TOTAL (AED)','STATUS','PAID DATE','REMARKS','ITEMS SUMMARY'];
+  const invHeader = ['DO NO','INV NO','DATE','CUSTOMER','CONTACT','ADDRESS','DRIVER','SUBTOTAL (AED)','DISC %','DISC AMT (AED)','AFTER DISC (AED)','VAT % ','VAT AMT (AED)','TOTAL (AED)','STATUS','PAID DATE','REMARKS','ITEMS SUMMARY'];
   const invRows = invs.map(i => {
     const discAmt = n(i.subtotal)*(n(i.discountPct)/100);
     const itemSummary = Object.entries(i.items||{}).filter(([,v])=>(n(v.wpQty)+n(v.dcQty)+n(v.prQty)+n(v.qty))>0).map(([k,v])=>`${k}×${n(v.wpQty)+n(v.dcQty)+n(v.prQty)+n(v.qty)}`).join('; ');
-    return [s(i.invNo), fd(i.date), s(i.customer), s(i.contact), s(i.address), s(i.driver),
+    return [s(i.pickup||''), s(i.invNo), fd(i.date), s(i.customer), s(i.contact), s(i.address), s(i.driver),
             n(i.subtotal), n(i.discountPct), discAmt, n(i.afterDiscount),
             n(i.vatPct||5), n(i.vat), n(i.total), s(i.status).toUpperCase(), fd(i.paidDate), s(i.remarks), itemSummary];
   });
@@ -3824,7 +3945,7 @@ function exportToExcel(){
   const wsUnpaid = XLSX.utils.aoa_to_sheet([invHeader, ...unpaid.map(i => {
     const discAmt = n(i.subtotal)*(n(i.discountPct)/100);
     const itemSummary = Object.entries(i.items||{}).filter(([,v])=>(n(v.wpQty)+n(v.dcQty)+n(v.prQty)+n(v.qty))>0).map(([k,v])=>`${k}×${n(v.wpQty)+n(v.dcQty)+n(v.prQty)+n(v.qty)}`).join('; ');
-    return [s(i.invNo), fd(i.date), s(i.customer), s(i.contact), s(i.address), s(i.driver),
+    return [s(i.pickup||''), s(i.invNo), fd(i.date), s(i.customer), s(i.contact), s(i.address), s(i.driver),
             n(i.subtotal), n(i.discountPct), discAmt, n(i.afterDiscount),
             n(i.vatPct||5), n(i.vat), n(i.total), 'UNPAID', '', s(i.remarks), itemSummary];
   })]);
@@ -3836,7 +3957,7 @@ function exportToExcel(){
   const wsPaid = XLSX.utils.aoa_to_sheet([invHeader, ...paid.map(i => {
     const discAmt = n(i.subtotal)*(n(i.discountPct)/100);
     const itemSummary = Object.entries(i.items||{}).filter(([,v])=>(n(v.wpQty)+n(v.dcQty)+n(v.prQty)+n(v.qty))>0).map(([k,v])=>`${k}×${n(v.wpQty)+n(v.dcQty)+n(v.prQty)+n(v.qty)}`).join('; ');
-    return [s(i.invNo), fd(i.date), s(i.customer), s(i.contact), s(i.address), s(i.driver),
+    return [s(i.pickup||''), s(i.invNo), fd(i.date), s(i.customer), s(i.contact), s(i.address), s(i.driver),
             n(i.subtotal), n(i.discountPct), discAmt, n(i.afterDiscount),
             n(i.vatPct||5), n(i.vat), n(i.total), 'PAID', fd(i.paidDate), s(i.remarks), itemSummary];
   })]);
@@ -3934,6 +4055,17 @@ function exportToExcel(){
   ]);
   XLSX.utils.book_append_sheet(wb, wsBackup, 'System Backup');
 
+  // ── SHEETS 10+: Monthly Statement (colorful grid — one sheet per month) ──
+  const uniqueMonths = [...new Set(invs.map(i=>(i.date||'').slice(0,7)).filter(Boolean))].sort();
+  uniqueMonths.forEach(month=>{
+    const wsMonth = buildMonthlyStatementSheet(invs, month);
+    if(wsMonth){
+      const [y,mo]=month.split('-');
+      const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+      XLSX.utils.book_append_sheet(wb, wsMonth, `${mNames[parseInt(mo)-1]} ${y}`);
+    }
+  });
+
   // ── Write file — cross-platform Blob method (works on iOS, Android, all desktop) ──
   const dateStr = new Date().toISOString().slice(0,10);
   const fileName = `Laundry_Backup_${dateStr}.xlsx`;
@@ -3957,9 +4089,232 @@ function exportToExcel(){
 }
 
 // ── Helper: set column widths ──
-function _styleSheet(ws, colCount){
+function _styleSheet(ws, colCount, opts){
+  opts = opts || {};
   const widths = [15,12,22,16,20,12,14,8,12,14,8,12,14,10,12,18,30];
   ws['!cols'] = widths.slice(0, colCount).map(w=>({wch:w}));
+
+  const range = XLSX.utils.decode_range(ws['!ref']||'A1');
+  const BLUE_HDR  = {fgColor:{rgb:'1A3A5C'}};
+  const GOLD_HDR  = {fgColor:{rgb:'B8860B'}};
+  const LIGHT_ROW = {fgColor:{rgb:'EEF1F6'}};
+  const GREEN_BG  = {fgColor:{rgb:'D1FAE5'}};
+  const RED_BG    = {fgColor:{rgb:'FEE2E2'}};
+  const TOTAL_BG  = {fgColor:{rgb:'1A3A5C'}};
+  const WHITE     = {rgb:'FFFFFF'};
+  const GOLD_C    = {rgb:'E8A020'};
+  const DARK      = {rgb:'1A2535'};
+
+  const cellStyle = (fill, font, bold, halign, border) => ({
+    fill:{patternType:'solid', fgColor:fill||{rgb:'FFFFFF'}},
+    font:{name:'Calibri', sz:10, bold:!!bold, color:font||{rgb:'1A2535'}},
+    alignment:{horizontal:halign||'left', vertical:'center', wrapText:false},
+    border: border ? {
+      top:{style:'thin',color:{rgb:'D0D8E4'}},
+      bottom:{style:'thin',color:{rgb:'D0D8E4'}},
+      left:{style:'thin',color:{rgb:'D0D8E4'}},
+      right:{style:'thin',color:{rgb:'D0D8E4'}}
+    } : {}
+  });
+
+  for(let R = range.s.r; R <= range.e.r; R++){
+    const isHeader = R === 0;
+    const isLast   = R === range.e.r;
+    const isEven   = R % 2 === 1;
+
+    for(let C = range.s.c; C <= range.e.c; C++){
+      const addr = XLSX.utils.encode_cell({r:R, c:C});
+      if(!ws[addr]) ws[addr] = {t:'z', v:''};
+
+      const cellVal = String(ws[addr].v||'').toUpperCase();
+      let fill, font, bold, halign;
+
+      if(isHeader){
+        fill  = opts.goldHeader ? GOLD_HDR : BLUE_HDR;
+        font  = WHITE;
+        bold  = true;
+        halign = 'center';
+      } else if(isLast && (cellVal.includes('TOTAL') || cellVal.includes('GRAND'))){
+        fill  = TOTAL_BG;
+        font  = GOLD_C;
+        bold  = true;
+        halign = C === 0 ? 'left' : 'right';
+      } else if(cellVal === 'UNPAID'){
+        fill  = RED_BG;
+        font  = {rgb:'991B1B'};
+        bold  = true;
+        halign = 'center';
+      } else if(cellVal === 'PAID'){
+        fill  = GREEN_BG;
+        font  = {rgb:'065F46'};
+        bold  = true;
+        halign = 'center';
+      } else {
+        fill  = isEven ? LIGHT_ROW : {rgb:'FFFFFF'};
+        font  = DARK;
+        bold  = false;
+        halign = (typeof ws[addr].v === 'number') ? 'right' : 'left';
+      }
+
+      ws[addr].s = cellStyle(fill, font, bold, halign, true);
+    }
+  }
+
+  // Freeze header row
+  ws['!freeze'] = {xSplit:0, ySplit:1};
+}
+
+// ── RICH MONTHLY STATEMENT SHEET (like image 2 — items × DO numbers grid) ──
+function buildMonthlyStatementSheet(invs, month){
+  // month = 'YYYY-MM' or null for all
+  const n  = v => parseFloat(v)||0;
+  const fd = d => { if(!d) return ''; try{ const [y,m,dd]=d.split('-'); return `${dd}/${m}/${y}`; }catch{return String(d||'');} };
+  const rates = STORE.get('rates')||{};
+  const ci = STORE.get('company_info')||{};
+
+  let filtered = invs;
+  if(month) filtered = invs.filter(i=>(i.date||'').startsWith(month));
+  if(!filtered.length) return null;
+
+  filtered = [...filtered].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+
+  // All unique items across these invoices
+  const itemSet = new Set();
+  filtered.forEach(inv=>Object.keys(inv.items||{}).forEach(k=>{
+    const v=inv.items[k];
+    if(n(v.wpQty)+n(v.dcQty)+n(v.prQty)+n(v.qty)>0) itemSet.add(k);
+  }));
+  const items = [...itemSet];
+
+  // Build header rows
+  const rows = [];
+  const merges = [];
+
+  // Company header row
+  const companyName = ci.name || 'LAUNDRY COUNTER SALE';
+  const companyInfo = [ci.address||'', ci.telfax||'', `TRN: ${ci.trn||''}`].filter(Boolean).join('  |  ');
+  rows.push([companyName]);
+  rows.push([companyInfo]);
+  rows.push([]);
+
+  // Client info (left side)
+  const customerNames = [...new Set(filtered.map(i=>i.customer).filter(Boolean))];
+  const customers = customerNames.join(', ');
+  rows.push([`CLIENT NAME:  ${customers}`]);
+  rows.push([]);
+
+  // Month title
+  const [y,mo] = (month||filtered[0].date.slice(0,7)).split('-');
+  const monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
+  const monthLabel = monthNames[parseInt(mo)-1]+' '+y;
+  rows.push([`LAUNDRY SERVICE — SUMMARY FOR THE MONTH OF ${monthLabel}`]);
+  rows.push([]);
+
+  // Table header row 1: DATE | 1..N DO numbers | QTY | UNIT PRICE | AMOUNT
+  const doNums = filtered.map(i=>i.pickup||i.invNo||'');
+  const dateRow = ['DATE', ...doNums.map(()=>''), 'QTY.', 'UNIT PRICE', 'AMOUNT (AED)'];
+  // Actually we use a simpler grid: ITEM / BILL NO. → columns are DO numbers
+  const billHeader = ['ITEM / BILL NO. →', ...doNums, 'QTY.', 'UNIT PRICE', 'AMOUNT (AED)'];
+  const dateHeader = ['DATE', ...filtered.map(i=>fd(i.date)), '', '', ''];
+
+  const headerRowIdx = rows.length;
+  rows.push(dateHeader);
+  rows.push(billHeader);
+
+  // Data rows — one per item
+  items.forEach(item=>{
+    const r=rates[item]||{wp:0,dc:0,pr:0};
+    const unitPrice = n(r.wp)||n(r.dc)||n(r.pr)||0;
+    let totalQty = 0;
+    const qtyPerDO = filtered.map(inv=>{
+      const v=inv.items[item];
+      if(!v) return 0;
+      const q=n(v.wpQty)+n(v.dcQty)+n(v.prQty)+n(v.qty);
+      totalQty+=q;
+      return q||'';
+    });
+    const amount = totalQty * unitPrice;
+    rows.push([item, ...qtyPerDO, totalQty||'', unitPrice||'', amount||'']);
+  });
+
+  // Subtotal row
+  const subtotal = filtered.reduce((s,i)=>s+n(i.subtotal),0);
+  const vatPct = n((filtered[0]||{}).vatPct||5);
+  const vat = filtered.reduce((s,i)=>s+n(i.vat),0);
+  const grandTotal = filtered.reduce((s,i)=>s+n(i.total),0);
+
+  rows.push([]);
+  const stRow = new Array(filtered.length+4).fill('');
+  stRow[0]='SUBTOTAL'; stRow[stRow.length-1]=subtotal.toFixed(2);
+  rows.push([...stRow]);
+
+  const vatRow = new Array(filtered.length+4).fill('');
+  vatRow[0]=`VAT @ ${vatPct}%`; vatRow[vatRow.length-1]=vat.toFixed(2);
+  rows.push([...vatRow]);
+
+  const gtRow = new Array(filtered.length+4).fill('');
+  gtRow[0]='GRAND TOTAL (AED)'; gtRow[gtRow.length-1]=grandTotal.toFixed(2);
+  rows.push([...gtRow]);
+
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+
+  // Column widths
+  const cols = [20, ...filtered.map(()=>({wch:8})), {wch:8},{wch:12},{wch:14}];
+  ws['!cols'] = [{wch:22}, ...filtered.map(()=>({wch:8})), {wch:8},{wch:12},{wch:14}];
+
+  // Apply color styles
+  const range = XLSX.utils.decode_range(ws['!ref']||'A1');
+  const BLUE  = {rgb:'1A3A5C'};
+  const GOLD  = {rgb:'E8A020'};
+  const WHITE = {rgb:'FFFFFF'};
+  const LGRAY = {rgb:'EEF1F6'};
+  const DARK  = {rgb:'1A2535'};
+  const TOTBG = {rgb:'F5C060'};
+
+  const cs = (fgRgb, fontRgb, bold, halign) => ({
+    fill:{patternType:'solid', fgColor:{rgb:fgRgb}},
+    font:{name:'Calibri', sz:10, bold:!!bold, color:{rgb:fontRgb}},
+    alignment:{horizontal:halign||'left', vertical:'center'},
+    border:{top:{style:'thin',color:{rgb:'D0D8E4'}},bottom:{style:'thin',color:{rgb:'D0D8E4'}},left:{style:'thin',color:{rgb:'D0D8E4'}},right:{style:'thin',color:{rgb:'D0D8E4'}}}
+  });
+
+  for(let R=range.s.r; R<=range.e.r; R++){
+    for(let C=range.s.c; C<=range.e.c; C++){
+      const addr = XLSX.utils.encode_cell({r:R, c:C});
+      if(!ws[addr]) ws[addr]={t:'z',v:''};
+      const val = String(ws[addr].v||'');
+      const isDateHeaderRow = R===headerRowIdx;
+      const isBillHeaderRow = R===headerRowIdx+1;
+      const isDataRow = R>headerRowIdx+1;
+      const isLastCols = C===range.e.c;
+      const isTotalRow = val.includes('SUBTOTAL')||val.includes('VAT @')||val.includes('GRAND TOTAL');
+      const isCompTitle = R===0;
+      const isMonthTitle = R===5;
+
+      if(isCompTitle){
+        ws[addr].s=cs('1A3A5C','FFFFFF',true,'center');
+      } else if(isMonthTitle){
+        ws[addr].s=cs('1A3A5C','E8A020',true,'center');
+      } else if(isDateHeaderRow){
+        ws[addr].s=cs(C===0?'1A3A5C':'2A5A8C','FFFFFF',true,'center');
+      } else if(isBillHeaderRow){
+        ws[addr].s=cs(C===0?'1A3A5C':'2A5A8C','FFFFFF',true,'center');
+      } else if(isTotalRow){
+        ws[addr].s=cs('1A3A5C','E8A020',true, C===0?'left':'right');
+      } else if(isDataRow){
+        const isEven=(R-headerRowIdx-2)%2===0;
+        if(isLastCols) ws[addr].s=cs('FFF9E6','B8860B',true,'right');
+        else ws[addr].s=cs(isEven?'EEF1F6':'FFFFFF','1A2535',false,C===0?'left':'center');
+      } else {
+        ws[addr].s=cs('FFFFFF','1A2535',false,'left');
+      }
+    }
+  }
+
+  // Freeze after header rows
+  ws['!freeze']={xSplit:1, ySplit:headerRowIdx+2};
+
+  return ws;
 }
 
 // ── JSON BACKUP EXPORT (secondary safety) ──
@@ -3975,6 +4330,9 @@ function exportJSONBackup(){
   document.body.appendChild(a);
   a.click();
   setTimeout(()=>{ URL.revokeObjectURL(url); document.body.removeChild(a); }, 2000);
+  // Save backup timestamp
+  localStorage.setItem('lcs_last_backup', new Date().toISOString());
+  updateBackupBanner();
 }
 
 // ── EXCEL IMPORT ──
@@ -4179,5 +4537,12 @@ document.addEventListener('DOMContentLoaded',()=>{
   });
 });
 </script>
+<!-- Backup Reminder Banner -->
+<div id="backup-banner" style="display:none;position:fixed;bottom:16px;left:50%;transform:translateX(-50%);z-index:9999;background:#92400e;color:#fff;padding:10px 20px;border-radius:8px;font-size:13px;font-weight:600;box-shadow:0 4px 20px rgba(0,0,0,.3);display:flex;align-items:center;gap:12px;white-space:nowrap">
+  <span>⚠️ <span id="backup-banner-msg">No backup taken yet</span></span>
+  <button onclick="exportJSONBackup()" style="background:#fff;color:#92400e;border:none;border-radius:5px;padding:4px 12px;font-size:12px;font-weight:700;cursor:pointer">Backup Now</button>
+  <button onclick="document.getElementById('backup-banner').style.display='none'" style="background:transparent;border:none;color:#fff;font-size:16px;cursor:pointer;padding:0 4px">✕</button>
+</div>
+
 </body>
 </html>
