@@ -753,7 +753,7 @@ CREATE POLICY "allow_all" ON bk_store FOR ALL USING (true) WITH CHECK (true);</t
 <!-- ═══════════════════════════════════ MAIN APP ═══════════════════════════════════ -->
 <div id="app">
 <!-- Prepared by Suhail Ahmed — subtle watermark -->
-<div style="position:fixed;bottom:8px;right:14px;font-size:10px;color:rgba(255,255,255,0.18);font-weight:500;letter-spacing:0.5px;pointer-events:none;z-index:1;user-select:none;font-family:var(--font)">Prepared by Suhail Ahmed</div>
+<div style="position:fixed;bottom:8px;right:14px;font-size:11px;color:rgba(255,255,255,0.55);font-weight:600;letter-spacing:0.5px;pointer-events:none;z-index:1;user-select:none;font-family:var(--font)">Prepared by Suhail Ahmed</div>
   <div class="topbar">
     <div class="topbar-brand" id="topbar-brand-name">≡ <span>Laundry Counter Sale</span></div>
     <div class="topbar-right">
@@ -1714,14 +1714,16 @@ function renderExportPage(){
 
     ${isAdm ? `
     <div class="card" style="border-color:var(--blue);background:var(--blue-soft)">
-      <div class="section-label" style="color:var(--blue)">📥 Import Excel or JSON (Admin Only)</div>
+      <div class="section-label" style="color:var(--blue)">📥 Import (Admin Only)</div>
       <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Restore data from a previously exported Excel or JSON backup file. <strong>Warning:</strong> This will overwrite or merge with existing data.</p>
       <button class="btn btn-ghost" type="button" onclick="document.getElementById('excel-import-file').click()">⬆ Import Excel or JSON</button>
     </div>
     ` : `
-    <div class="card" style="opacity:0.55">
-      <div class="section-label">📥 Import (Admin Only)</div>
-      <p style="font-size:13px;color:var(--muted)">Importing data is restricted to admin only to protect against accidental overwrites.</p>
+    <div class="card" style="border-color:var(--blue);background:var(--blue-soft)">
+      <div class="section-label" style="color:var(--blue)">📥 Import JSON Backup</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:16px">Restore data from a previously exported JSON backup file. <strong>Note:</strong> Excel import is restricted to admin only.</p>
+      <button class="btn btn-ghost" type="button" onclick="document.getElementById('staff-json-import-file').click()">⬆ Import JSON Backup</button>
+      <input type="file" id="staff-json-import-file" accept=".json" style="display:none" onchange="handleStaffJSONImport(event)">
     </div>
     `}
 
@@ -4416,6 +4418,36 @@ function exportJSONBackup(){
 }
 
 // ── EXCEL IMPORT ──
+function handleStaffJSONImport(e){
+  const file = e.target.files[0]; if(!file) return;
+  if(!file.name.endsWith('.json')){ alert('Please select a .json backup file.'); return; }
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try {
+      const data = JSON.parse(ev.target.result);
+      if(!data.invoices && !data.drivers){ alert('❌ Invalid JSON file. Please use a file exported from this system.'); return; }
+      const existing = STORE.get('invoices') || [];
+      const choice = existing.length > 0
+        ? confirm(`You have ${existing.length} existing order(s).\n\nClick OK to MERGE (keep existing + add from backup)\nClick Cancel to REPLACE (overwrite with backup data)`)
+        : false;
+      if(choice){
+        const existingIds = new Set(existing.map(i=>i.id));
+        const newInvs = (data.invoices||[]).filter(i=>!existingIds.has(i.id));
+        STORE.set('invoices', [...existing, ...newInvs]);
+        alert(`✅ Merged! Added ${newInvs.length} new order(s). Total: ${existing.length + newInvs.length}`);
+      } else {
+        if(data.invoices) STORE.set('invoices', data.invoices);
+        if(data.drivers && data.drivers.length) STORE.set('drivers', data.drivers);
+        if(data.rates) STORE.set('rates', data.rates);
+        alert(`✅ JSON backup imported! (${(data.invoices||[]).length} orders)`);
+      }
+      renderPage(currentPage);
+    } catch(err){ alert('❌ Could not read JSON file. Make sure it was exported from this system.'); }
+    e.target.value = '';
+  };
+  reader.readAsText(file);
+}
+
 function handleExcelImport(e){
   if(isStaff()){alert('⛔ Data import is restricted to admin only.');return;}
   const file=e.target.files[0]; if(!file) return;
