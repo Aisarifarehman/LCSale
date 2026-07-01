@@ -1179,7 +1179,13 @@ async function loadAllFromCloud(){
   try{
     const {data,error} = await _supabase.from('bk_store').select('key,value');
     if(error) throw error;
-    (data||[]).forEach(row=>{ _cache[row.key] = row.value; });
+    (data||[]).forEach(row=>{
+      _cache[row.key] = row.value;
+      if(row.key === 'company_logo'){
+        if(row.value) localStorage.setItem('lcs_company_logo', row.value);
+        else localStorage.removeItem('lcs_company_logo');
+      }
+    });
     setSyncUI('syncing','Connected…');
   }catch(e){
     console.error('loadAll',e);
@@ -1213,6 +1219,12 @@ function startRealtimeSync(){
 
       // Update cache with remote data
       _cache[row.key] = row.value;
+
+      // If logo was updated remotely, also cache locally for fast future loads
+      if(row.key === 'company_logo'){
+        if(row.value) localStorage.setItem('lcs_company_logo', row.value);
+        else localStorage.removeItem('lcs_company_logo');
+      }
 
       // Only re-render the current page content — NEVER touch login/auth state
       if(currentUser){ // only if someone is logged in on this PC
@@ -2398,6 +2410,8 @@ function collectItems(){
 function saveInvoice(){
   const customer=document.getElementById('inv-customer').value.trim().toUpperCase();
   if(!customer){alert('Please enter customer name.');return}
+  const driver=document.getElementById('inv-driver').value.trim();
+  if(!driver){alert('Please select a Driver / Staff before saving.\n\nEvery order must have a responsible person assigned.');return}
   const pickupVal=document.getElementById('inv-pickup').value.trim();
   if(!pickupVal){alert('Please enter a Pickup/Delivery List No. (or switch to Auto mode).');return}
   const dupCheckInvs=STORE.get('invoices');
@@ -3458,7 +3472,7 @@ function _doPrint(id, docType){
   const ciEmail = ci.email || '';
   const ciTrn = ci.trn || '100029720800003';
   const ciService = ci.service || 'LAUNDRY SERVICES';
-  const ciLogo = localStorage.getItem('lcs_company_logo') || '';
+  const ciLogo = STORE.get('company_logo') || localStorage.getItem('lcs_company_logo') || '';
 
   const items=inv.items||{};
   const vatPct = (inv.vatPct !== undefined) ? inv.vatPct : 5;
@@ -3833,8 +3847,8 @@ function openCompanyModal(){
   document.getElementById('ci-trn').value = ci.trn || '100029720800003';
   document.getElementById('ci-service').value = ci.service || 'LAUNDRY SERVICES';
   openModal('company-modal');
-  // Load logo preview
-  const savedLogo = localStorage.getItem('lcs_company_logo');
+  // Load logo preview — check Supabase store first, then localStorage cache
+  const savedLogo = STORE.get('company_logo') || localStorage.getItem('lcs_company_logo');
   _renderLogoPreview(savedLogo||null);
 }
 
@@ -3844,13 +3858,15 @@ function handleLogoUpload(input){
   const reader = new FileReader();
   reader.onload = e => {
     const dataUrl = e.target.result;
-    localStorage.setItem('lcs_company_logo', dataUrl);
+    STORE.set('company_logo', dataUrl);  // saves to Supabase + localStorage cache
+    localStorage.setItem('lcs_company_logo', dataUrl); // local cache for fast load
     _renderLogoPreview(dataUrl);
   };
   reader.readAsDataURL(file);
 }
 
 function removeLogo(){
+  STORE.set('company_logo', null);
   localStorage.removeItem('lcs_company_logo');
   _renderLogoPreview(null);
 }
