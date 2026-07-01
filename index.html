@@ -11,6 +11,8 @@
 <meta name="format-detection" content="telephone=no">
 <title>Laundry Counter Sale</title>
 <!-- Stable CDN versions compatible across all platforms & browsers -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+<!-- XLSX kept for Excel import reading only -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2" crossorigin="anonymous"></script>
@@ -750,6 +752,8 @@ CREATE POLICY "allow_all" ON bk_store FOR ALL USING (true) WITH CHECK (true);</t
 
 <!-- ═══════════════════════════════════ MAIN APP ═══════════════════════════════════ -->
 <div id="app">
+<!-- Prepared by Suhail Ahmed — subtle watermark -->
+<div style="position:fixed;bottom:8px;right:14px;font-size:10px;color:rgba(255,255,255,0.18);font-weight:500;letter-spacing:0.5px;pointer-events:none;z-index:1;user-select:none;font-family:var(--font)">Prepared by Suhail Ahmed</div>
   <div class="topbar">
     <div class="topbar-brand" id="topbar-brand-name">≡ <span>Laundry Counter Sale</span></div>
     <div class="topbar-right">
@@ -1654,6 +1658,23 @@ function nav(page){
 
 function renderPage(page){
   const c=document.getElementById('content');
+
+  // Show maintenance screen to staff when maintenance mode is on
+  if(isStaff() && STORE.get('maintenance_mode')){
+    c.innerHTML=`
+    <div style="display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:60vh;text-align:center;padding:40px">
+      <div style="font-size:56px;margin-bottom:20px">🔧</div>
+      <div style="font-size:22px;font-weight:800;color:var(--red);margin-bottom:10px">System Maintenance in Progress</div>
+      <div style="font-size:14px;color:var(--muted);max-width:400px;line-height:1.7;margin-bottom:24px">
+        The system is currently being updated by the administrator.<br>
+        Please wait — you will be able to work again shortly.<br><br>
+        <strong>Do not close this tab.</strong> Refresh the page in a few minutes.
+      </div>
+      <button class="btn btn-ghost" type="button" onclick="window.location.reload()">↺ Refresh Now</button>
+    </div>`;
+    return;
+  }
+
   if(page==='dashboard'){ c.innerHTML=renderDashboard(); }
   else if(page==='invoices') c.innerHTML=renderInvoices();
   else if(page==='drivers') c.innerHTML=renderDrivers();
@@ -2408,6 +2429,7 @@ function collectItems(){
 }
 
 function saveInvoice(){
+  if(isStaff() && STORE.get('maintenance_mode')){ alert('🔧 System is under maintenance. You cannot save entries right now. Please wait for the admin to complete the update.'); return; }
   const customer=document.getElementById('inv-customer').value.trim().toUpperCase();
   if(!customer){alert('Please enter customer name.');return}
   const driver=document.getElementById('inv-driver').value.trim();
@@ -3215,12 +3237,43 @@ function resetRatesToZero(){
 // ════════════════════════════════════════
 //  SETTINGS — ADMIN ONLY
 // ════════════════════════════════════════
+function setMaintenanceMode(on){
+  STORE.set('maintenance_mode', on);
+  renderPage('settings');
+  if(on){
+    alert('🔧 Maintenance Mode is now ON.\n\nStaff will see a maintenance screen and cannot make any entries until you turn it off.');
+  } else {
+    alert('✅ Maintenance is Done. System is now Live.\n\nStaff can work normally again.');
+  }
+}
+
+function checkMaintenanceBlock(){
+  if(isStaff() && STORE.get('maintenance_mode')){
+    return true;
+  }
+  return false;
+}
+
 function renderSettings(){
   if(isStaff()) return '<div style="padding:40px;text-align:center;color:var(--muted)">⛔ Settings are restricted to admin only.</div>';
   const cred=STORE.get('credentials');
   return `
   <div class="page-header"><div class="page-title">⚙️ Settings & Admin</div></div>
   <div style="display:grid;grid-template-columns:1fr 1fr;gap:20px">
+    <div class="card" style="grid-column:1/-1;border-color:${STORE.get('maintenance_mode')?'var(--red)':'var(--border)'};background:${STORE.get('maintenance_mode')?'#fff5f5':'var(--surface)'}">
+      <div class="section-label" style="color:${STORE.get('maintenance_mode')?'var(--red)':'var(--text)'}">🔧 Maintenance Mode</div>
+      <p style="font-size:13px;color:var(--muted);margin-bottom:14px">When active, staff cannot create, edit or save any entries. Use this when you are updating the system or making changes to the app.</p>
+      <div style="display:flex;align-items:center;gap:16px;flex-wrap:wrap">
+        <div style="display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600">
+          <span style="width:10px;height:10px;border-radius:50%;background:${STORE.get('maintenance_mode')?'var(--red)':'var(--green)'}"></span>
+          ${STORE.get('maintenance_mode')?'<span style="color:var(--red)">🔴 Maintenance in Progress — Staff access blocked</span>':'<span style="color:var(--green)">🟢 System is Live — Staff can work normally</span>'}
+        </div>
+        ${STORE.get('maintenance_mode')
+          ?`<button class="btn btn-success" type="button" onclick="setMaintenanceMode(false)">✅ Maintenance Done — Go Live</button>`
+          :`<button class="btn btn-red" type="button" onclick="setMaintenanceMode(true)">🔧 Start Maintenance</button>`
+        }
+      </div>
+    </div>
     <div class="card">
       <div class="section-label">Security</div>
       <p style="font-size:13px;color:var(--muted);margin-bottom:14px">You are the master admin. Only you can change payment status, delete records, and manage rates.</p>
@@ -3658,6 +3711,7 @@ function _doPrint(id, docType){
       <div class="so-footer-legal">
         ${ciLegal} &nbsp;|&nbsp; TRN: ${ciTrn}
       </div>
+      <div style="text-align:right;font-size:4.5pt;color:#ccc;margin-top:1.5mm;opacity:0.5">Prepared by Suhail Ahmed</div>
 
     </div>`;/* end .so-wrap */
 
@@ -3812,6 +3866,7 @@ function _doPrint(id, docType){
     <!-- ══ DOC FOOTER ══ -->
     <div class="ti-doc-footer">
       <span>A4 Size &nbsp;&nbsp; Ink-Saver Print</span>
+      <span style="color:#ccc;font-size:6pt;opacity:0.5">Prepared by Suhail Ahmed</span>
       <span>Serial Number Start from: <strong>${inv.invNo}</strong></span>
     </div>
 
@@ -3930,407 +3985,369 @@ function initCompanyPreview(){
 // ── EXCEL EXPORT (multi-sheet) ──────────────────────────────────────────────
 function exportToExcel(){
   if(isStaff()){alert('⛔ Data export is restricted to admin only.');return;}
-  if(typeof XLSX==='undefined'){alert('⚠️ Excel library not loaded. Please check your internet connection and try again.');return;}
+  if(typeof ExcelJS==='undefined'){alert('⚠️ Excel library not loaded. Please check your internet connection.');return;}
 
-  const invs  = STORE.get('invoices') || [];
-  const drvs  = STORE.get('drivers')  || [];
-  const rates = STORE.get('rates')    || {};
+  const invs   = STORE.get('invoices') || [];
+  const drvs   = STORE.get('drivers')  || [];
+  const rates  = STORE.get('rates')    || {};
+  const ci     = STORE.get('company_info') || {};
+  const ciName = ci.name || 'LAUNDRY COUNTER SALE';
+  const ciAddr = ci.address || '';
+  const ciTrn  = ci.trn || '';
+  const ciTel  = ci.telfax || '';
+  const ciEmail= ci.email || '';
 
-  const wb = XLSX.utils.book_new();
-
-  // ── Helper: safe string ──
-  const s  = v => (v===null||v===undefined)?'':String(v);
   const n  = v => parseFloat(v)||0;
-  const fd = d => { if(!d) return ''; try{ const [y,m,dd]=d.split('-'); return `${dd}/${m}/${y}`; }catch{return s(d);} };
+  const fd = d => { if(!d) return ''; try{ const [y,m,dd]=d.split('-'); return `${dd}/${m}/${y.slice(-2)}`; }catch{return String(d||'');} };
+  const s  = v => (v===null||v===undefined)?'':String(v);
 
-  // ── SHEET 1: All Invoices ──
-  const invHeader = ['DO NO','INV NO','DATE','CUSTOMER','CONTACT','ADDRESS','DRIVER','SUBTOTAL (AED)','DISC %','DISC AMT (AED)','AFTER DISC (AED)','VAT % ','VAT AMT (AED)','TOTAL (AED)','STATUS','PAID DATE','REMARKS','ITEMS SUMMARY'];
-  const invRows = invs.map(i => {
-    const discAmt = n(i.subtotal)*(n(i.discountPct)/100);
-    const itemSummary = Object.entries(i.items||{}).filter(([,v])=>(n(v.wpQty)+n(v.dcQty)+n(v.prQty)+n(v.qty))>0).map(([k,v])=>`${k}×${n(v.wpQty)+n(v.dcQty)+n(v.prQty)+n(v.qty)}`).join('; ');
-    return [s(i.pickup||''), s(i.invNo), fd(i.date), s(i.customer), s(i.contact), s(i.address), s(i.driver),
-            n(i.subtotal), n(i.discountPct), discAmt, n(i.afterDiscount),
-            n(i.vatPct||5), n(i.vat), n(i.total), s(i.status).toUpperCase(), fd(i.paidDate), s(i.remarks), itemSummary];
+  // ── COLORS ──
+  const C_BLUE   = {argb:'FF1A3A5C'};
+  const C_GOLD   = {argb:'FFE8A020'};
+  const C_WHITE  = {argb:'FFFFFFFF'};
+  const C_LGRAY  = {argb:'FFEEF1F6'};
+  const C_DARK   = {argb:'FF1A2535'};
+  const C_GREEN  = {argb:'FFD1FAE5'};
+  const C_GTEXT  = {argb:'FF065F46'};
+  const C_RED    = {argb:'FFFEE2E2'};
+  const C_RTEXT  = {argb:'FF991B1B'};
+  const C_GOLD2  = {argb:'FFFFF9E6'};
+
+  const thin = {style:'thin', color:{argb:'FFD0D8E4'}};
+  const border = {top:thin,bottom:thin,left:thin,right:thin};
+  const thickBorder = {top:{style:'medium',color:{argb:'FF1A3A5C'}},bottom:{style:'medium',color:{argb:'FF1A3A5C'}},left:{style:'medium',color:{argb:'FF1A3A5C'}},right:{style:'medium',color:{argb:'FF1A3A5C'}}};
+
+  function hdrStyle(bgColor, fontColor){
+    return {
+      fill:{type:'pattern',pattern:'solid',fgColor:bgColor},
+      font:{name:'Calibri',size:10,bold:true,color:fontColor},
+      alignment:{horizontal:'center',vertical:'middle',wrapText:false},
+      border
+    };
+  }
+  function dataStyle(bgColor, fontColor, align, bold){
+    return {
+      fill:{type:'pattern',pattern:'solid',fgColor:bgColor||{argb:'FFFFFFFF'}},
+      font:{name:'Calibri',size:10,bold:!!bold,color:fontColor||C_DARK},
+      alignment:{horizontal:align||'left',vertical:'middle'},
+      border
+    };
+  }
+  function totalStyle(){
+    return {
+      fill:{type:'pattern',pattern:'solid',fgColor:C_BLUE},
+      font:{name:'Calibri',size:10,bold:true,color:C_GOLD},
+      alignment:{horizontal:'right',vertical:'middle'},
+      border
+    };
+  }
+
+  function applySheet(ws, rows, colWidths){
+    // Set column widths
+    ws.columns = colWidths.map(w=>({width:w}));
+    rows.forEach((rowData, ri)=>{
+      const row = ws.addRow(rowData.values);
+      row.height = 18;
+      rowData.values.forEach((_, ci2)=>{
+        const cell = row.getCell(ci2+1);
+        if(rowData.style) cell.style = {...rowData.style};
+        else if(rowData.styles && rowData.styles[ci2]) cell.style = {...rowData.styles[ci2]};
+      });
+    });
+    // Freeze first row
+    ws.views = [{state:'frozen', ySplit:1}];
+  }
+
+  const wb = new ExcelJS.Workbook();
+  wb.creator = 'Laundry Counter Sale';
+  wb.created = new Date();
+
+  // ═══════════════════════════════════════════
+  // SHEET 1: All Invoices
+  // ═══════════════════════════════════════════
+  const ws1 = wb.addWorksheet('All Invoices');
+  const invCols = ['DO NO','INV NO','DATE','CUSTOMER','CONTACT','ADDRESS','DRIVER','SUBTOTAL (AED)','DISC %','DISC AMT (AED)','AFTER DISC (AED)','VAT %','VAT AMT (AED)','TOTAL (AED)','STATUS','PAID DATE','REMARKS','ITEMS SUMMARY'];
+  const invWidths = [10,10,12,22,16,24,14,14,8,14,14,7,13,14,12,12,20,35];
+  const hdr1 = invCols.map(()=>hdrStyle(C_BLUE, C_WHITE));
+  ws1.addRow(invCols).eachCell((cell,ci2)=>{ cell.style = hdr1[ci2-1]; });
+  ws1.getRow(1).height = 20;
+  ws1.views = [{state:'frozen', ySplit:1}];
+  ws1.columns = invWidths.map(w=>({width:w}));
+
+  invs.forEach((inv,ri)=>{
+    const discAmt = n(inv.subtotal)*(n(inv.discountPct)/100);
+    const items = Object.entries(inv.items||{}).filter(([,v])=>(n(v.wpQty)+n(v.dcQty)+n(v.prQty)+n(v.qty))>0).map(([k,v])=>`${k}×${n(v.wpQty)+n(v.dcQty)+n(v.prQty)+n(v.qty)}`).join('; ');
+    const isEven = ri%2===0;
+    const bg = isEven ? {argb:'FFFFFFFF'} : C_LGRAY;
+    const row = ws1.addRow([s(inv.pickup||''),s(inv.invNo||''),fd(inv.date),s(inv.customer),s(inv.contact),s(inv.address),s(inv.driver),n(inv.subtotal),n(inv.discountPct),discAmt,n(inv.afterDiscount),n(inv.vatPct||5),n(inv.vat),n(inv.total),s(inv.status).toUpperCase(),fd(inv.paidDate),s(inv.remarks),items]);
+    row.height = 17;
+    row.eachCell((cell,ci2)=>{
+      const val = String(cell.value||'');
+      if(val==='PAID') cell.style = dataStyle(C_GREEN, C_GTEXT,'center',true);
+      else if(val==='UNPAID') cell.style = dataStyle(C_RED, C_RTEXT,'center',true);
+      else if(val==='CANCELLED') cell.style = dataStyle({argb:'FFFFF3CD'},{argb:'FF92400E'},'center',true);
+      else if(ci2<=2) cell.style = dataStyle(bg, C_GOLD,'left',true);
+      else if(typeof cell.value==='number') cell.style = dataStyle(bg,C_DARK,'right',false);
+      else cell.style = dataStyle(bg,C_DARK,'left',false);
+    });
   });
-  const wsAll = XLSX.utils.aoa_to_sheet([invHeader, ...invRows]);
-  _styleSheet(wsAll, invHeader.length);
-  XLSX.utils.book_append_sheet(wb, wsAll, 'All Invoices');
 
-  // ── SHEET 2: Unpaid Invoices ──
-  const unpaid = invs.filter(i=>i.status==='unpaid');
-  const wsUnpaid = XLSX.utils.aoa_to_sheet([invHeader, ...unpaid.map(i => {
-    const discAmt = n(i.subtotal)*(n(i.discountPct)/100);
-    const itemSummary = Object.entries(i.items||{}).filter(([,v])=>(n(v.wpQty)+n(v.dcQty)+n(v.prQty)+n(v.qty))>0).map(([k,v])=>`${k}×${n(v.wpQty)+n(v.dcQty)+n(v.prQty)+n(v.qty)}`).join('; ');
-    return [s(i.pickup||''), s(i.invNo), fd(i.date), s(i.customer), s(i.contact), s(i.address), s(i.driver),
-            n(i.subtotal), n(i.discountPct), discAmt, n(i.afterDiscount),
-            n(i.vatPct||5), n(i.vat), n(i.total), 'UNPAID', '', s(i.remarks), itemSummary];
-  })]);
-  _styleSheet(wsUnpaid, invHeader.length);
-  XLSX.utils.book_append_sheet(wb, wsUnpaid, 'Unpaid');
+  // ═══════════════════════════════════════════
+  // SHEET 2 & 3: Unpaid / Paid
+  // ═══════════════════════════════════════════
+  ['Unpaid','Paid','Cancelled'].forEach(statusLabel=>{
+    const filtered = invs.filter(i=>i.status===statusLabel.toLowerCase());
+    const ws = wb.addWorksheet(statusLabel);
+    ws.columns = invWidths.map(w=>({width:w}));
+    ws.addRow(invCols).eachCell((cell,ci2)=>{ cell.style = hdrStyle(C_BLUE,C_WHITE); });
+    ws.getRow(1).height = 20;
+    ws.views = [{state:'frozen', ySplit:1}];
+    filtered.forEach((inv,ri)=>{
+      const discAmt = n(inv.subtotal)*(n(inv.discountPct)/100);
+      const items = Object.entries(inv.items||{}).filter(([,v])=>(n(v.wpQty)+n(v.dcQty)+n(v.prQty)+n(v.qty))>0).map(([k,v])=>`${k}×${n(v.wpQty)+n(v.dcQty)+n(v.prQty)+n(v.qty)}`).join('; ');
+      const bg = ri%2===0?{argb:'FFFFFFFF'}:C_LGRAY;
+      const row = ws.addRow([s(inv.pickup||''),s(inv.invNo||''),fd(inv.date),s(inv.customer),s(inv.contact),s(inv.address),s(inv.driver),n(inv.subtotal),n(inv.discountPct),discAmt,n(inv.afterDiscount),n(inv.vatPct||5),n(inv.vat),n(inv.total),statusLabel.toUpperCase(),fd(inv.paidDate),s(inv.remarks),items]);
+      row.height = 17;
+      row.eachCell((cell,ci2)=>{
+        if(ci2<=2) cell.style = dataStyle(bg,C_GOLD,'left',true);
+        else if(typeof cell.value==='number') cell.style = dataStyle(bg,C_DARK,'right',false);
+        else cell.style = dataStyle(bg,C_DARK,'left',false);
+      });
+    });
+  });
 
-  // ── SHEET 3: Paid Invoices ──
-  const paid = invs.filter(i=>i.status==='paid');
-  const wsPaid = XLSX.utils.aoa_to_sheet([invHeader, ...paid.map(i => {
-    const discAmt = n(i.subtotal)*(n(i.discountPct)/100);
-    const itemSummary = Object.entries(i.items||{}).filter(([,v])=>(n(v.wpQty)+n(v.dcQty)+n(v.prQty)+n(v.qty))>0).map(([k,v])=>`${k}×${n(v.wpQty)+n(v.dcQty)+n(v.prQty)+n(v.qty)}`).join('; ');
-    return [s(i.pickup||''), s(i.invNo), fd(i.date), s(i.customer), s(i.contact), s(i.address), s(i.driver),
-            n(i.subtotal), n(i.discountPct), discAmt, n(i.afterDiscount),
-            n(i.vatPct||5), n(i.vat), n(i.total), 'PAID', fd(i.paidDate), s(i.remarks), itemSummary];
-  })]);
-  _styleSheet(wsPaid, invHeader.length);
-  XLSX.utils.book_append_sheet(wb, wsPaid, 'Paid');
-
-  // ── SHEET 4: Monthly Summary ──
-  const monthMap = {};
-  invs.forEach(i => {
-    const m = (i.date||'').slice(0,7); if(!m) return;
-    if(!monthMap[m]) monthMap[m]={month:m,count:0,subtotal:0,vat:0,total:0,paid:0,unpaid:0,paidAmt:0,unpaidAmt:0};
+  // ═══════════════════════════════════════════
+  // SHEET 5: Monthly Summary
+  // ═══════════════════════════════════════════
+  const wsM = wb.addWorksheet('Monthly Summary');
+  wsM.columns = [14,10,13,15,13,16,11,14,13,15].map(w=>({width:w}));
+  const mHdr = ['MONTH','YEAR','TOTAL ORDERS','SUBTOTAL (AED)','VAT (AED)','TOTAL BILLED (AED)','PAID COUNT','PAID AMT (AED)','UNPAID COUNT','UNPAID AMT (AED)'];
+  wsM.addRow(mHdr).eachCell(cell=>{ cell.style = hdrStyle(C_BLUE,C_WHITE); });
+  wsM.getRow(1).height = 20;
+  wsM.views = [{state:'frozen', ySplit:1}];
+  const monthMap={};
+  invs.forEach(i=>{
+    const m=(i.date||'').slice(0,7); if(!m) return;
+    if(!monthMap[m]) monthMap[m]={month:m,count:0,subtotal:0,vat:0,total:0,paid:0,paidAmt:0,unpaid:0,unpaidAmt:0};
     const mg=monthMap[m];
-    mg.count++; mg.subtotal+=n(i.subtotal); mg.vat+=n(i.vat); mg.total+=n(i.total);
+    mg.count++;mg.subtotal+=n(i.subtotal);mg.vat+=n(i.vat);mg.total+=n(i.total);
     if(i.status==='paid'){mg.paid++;mg.paidAmt+=n(i.total);}
     if(i.status==='unpaid'){mg.unpaid++;mg.unpaidAmt+=n(i.total);}
   });
-  const monthHeader=['MONTH','YEAR','TOTAL ORDERS','SUBTOTAL (AED)','VAT (AED)','TOTAL BILLED (AED)','PAID COUNT','PAID AMT (AED)','UNPAID COUNT','UNPAID AMT (AED)'];
-  const monthRows=Object.values(monthMap).sort((a,b)=>a.month.localeCompare(b.month)).map(mg=>{
+  const mNames2=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  Object.values(monthMap).sort((a,b)=>a.month.localeCompare(b.month)).forEach((mg,ri)=>{
     const [y,mo]=mg.month.split('-');
-    const names=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-    return [`${names[parseInt(mo)-1]} ${y}`, y, mg.count, mg.subtotal, mg.vat, mg.total, mg.paid, mg.paidAmt, mg.unpaid, mg.unpaidAmt];
+    const bg = ri%2===0?{argb:'FFFFFFFF'}:C_LGRAY;
+    const row = wsM.addRow([`${mNames2[parseInt(mo)-1]} ${y}`,y,mg.count,mg.subtotal,mg.vat,mg.total,mg.paid,mg.paidAmt,mg.unpaid,mg.unpaidAmt]);
+    row.height=17; row.eachCell((cell,ci2)=>{ cell.style=dataStyle(bg,C_DARK,ci2>2?'right':'left',false); });
   });
-  // Grand total row
-  const gtTotal = Object.values(monthMap).reduce((s,m)=>({count:s.count+m.count,subtotal:s.subtotal+m.subtotal,vat:s.vat+m.vat,total:s.total+m.total,paid:s.paid+m.paid,paidAmt:s.paidAmt+m.paidAmt,unpaid:s.unpaid+m.unpaid,unpaidAmt:s.unpaidAmt+m.unpaidAmt}),{count:0,subtotal:0,vat:0,total:0,paid:0,paidAmt:0,unpaid:0,unpaidAmt:0});
-  monthRows.push(['GRAND TOTAL','', gtTotal.count, gtTotal.subtotal, gtTotal.vat, gtTotal.total, gtTotal.paid, gtTotal.paidAmt, gtTotal.unpaid, gtTotal.unpaidAmt]);
-  const wsMonthly = XLSX.utils.aoa_to_sheet([monthHeader, ...monthRows]);
-  _styleSheet(wsMonthly, monthHeader.length);
-  XLSX.utils.book_append_sheet(wb, wsMonthly, 'Monthly Summary');
+  // Grand total
+  const gt=Object.values(monthMap).reduce((s,m)=>({count:s.count+m.count,subtotal:s.subtotal+m.subtotal,vat:s.vat+m.vat,total:s.total+m.total,paid:s.paid+m.paid,paidAmt:s.paidAmt+m.paidAmt,unpaid:s.unpaid+m.unpaid,unpaidAmt:s.unpaidAmt+m.unpaidAmt}),{count:0,subtotal:0,vat:0,total:0,paid:0,paidAmt:0,unpaid:0,unpaidAmt:0});
+  const gRow=wsM.addRow(['GRAND TOTAL','',gt.count,gt.subtotal,gt.vat,gt.total,gt.paid,gt.paidAmt,gt.unpaid,gt.unpaidAmt]);
+  gRow.height=20; gRow.eachCell(cell=>{ cell.style=totalStyle(); });
 
-  // ── SHEET 5: By Driver (all invoices grouped) ──
-  const drvHeader=['DRIVER','INV NO','DATE','CUSTOMER','TOTAL (AED)','STATUS','PAID DATE'];
-  const drvRows=[];
+  // ═══════════════════════════════════════════
+  // SHEET 6: By Driver
+  // ═══════════════════════════════════════════
+  const wsDrv = wb.addWorksheet('By Driver');
+  wsDrv.columns=[12,10,12,24,14,12,12].map(w=>({width:w}));
+  wsDrv.addRow(['DRIVER','DO NO','DATE','CUSTOMER','TOTAL (AED)','STATUS','PAID DATE']).eachCell(cell=>{ cell.style=hdrStyle(C_BLUE,C_WHITE); });
+  wsDrv.getRow(1).height=20; wsDrv.views=[{state:'frozen',ySplit:1}];
   const driverNames=[...new Set(invs.map(i=>i.driver||'').filter(Boolean))].sort();
   driverNames.forEach(drv=>{
     const dInvs=invs.filter(i=>i.driver===drv);
-    dInvs.forEach(i=>drvRows.push([drv, s(i.invNo), fd(i.date), s(i.customer), n(i.total), s(i.status).toUpperCase(), fd(i.paidDate)]));
-    const tot=dInvs.reduce((s,i)=>s+n(i.total),0);
-    const unpaidTot=dInvs.filter(i=>i.status==='unpaid').reduce((s,i)=>s+n(i.total),0);
-    drvRows.push([`${drv} — TOTAL: AED ${tot.toFixed(2)}  |  UNPAID: AED ${unpaidTot.toFixed(2)}`,'','','','','','']);
-    drvRows.push(['','','','','','','']);
-  });
-  const wsDriver = XLSX.utils.aoa_to_sheet([drvHeader, ...drvRows]);
-  _styleSheet(wsDriver, drvHeader.length);
-  XLSX.utils.book_append_sheet(wb, wsDriver, 'By Driver');
-
-  // ── SHEET 6: Customer Records ──
-  const custMap={};
-  invs.forEach(i=>{
-    const k=(i.customer||'').toUpperCase(); if(!k) return;
-    if(!custMap[k]) custMap[k]={name:k,contact:i.contact||'',address:i.address||'',count:0,total:0,paid:0,unpaid:0,paidAmt:0,unpaidAmt:0,lastDate:''};
-    const c=custMap[k];
-    c.count++; c.total+=n(i.total);
-    if(i.status==='paid'){c.paid++;c.paidAmt+=n(i.total);}
-    if(i.status==='unpaid'){c.unpaid++;c.unpaidAmt+=n(i.total);}
-    if((i.date||'')>c.lastDate) c.lastDate=i.date||'';
-    if(i.contact&&!c.contact) c.contact=i.contact;
-    if(i.address&&!c.address) c.address=i.address;
-  });
-  const custHeader=['CUSTOMER NAME','CONTACT','ADDRESS','TOTAL ORDERS','TOTAL BILLED (AED)','PAID COUNT','PAID AMT (AED)','UNPAID COUNT','UNPAID AMT (AED)','LAST ORDER DATE'];
-  const custRows=Object.values(custMap).sort((a,b)=>a.name.localeCompare(b.name)).map(c=>[c.name,c.contact,c.address,c.count,c.total,c.paid,c.paidAmt,c.unpaid,c.unpaidAmt,fd(c.lastDate)]);
-  const wsCust = XLSX.utils.aoa_to_sheet([custHeader, ...custRows]);
-  _styleSheet(wsCust, custHeader.length);
-  XLSX.utils.book_append_sheet(wb, wsCust, 'Customer Records');
-
-  // ── SHEET 7: Driver Records (master list) ──
-  const drvMasterHeader=['DRIVER NAME','PHONE','NOTES','TOTAL INVOICES','UNPAID COUNT','UNPAID AMT (AED)','PAID COUNT','PAID AMT (AED)'];
-  const drvMasterRows=drvs.map(d=>{
-    const dInvs=invs.filter(i=>i.driver===d.name);
-    const unpaidInvs=dInvs.filter(i=>i.status==='unpaid');
-    const paidInvs=dInvs.filter(i=>i.status==='paid');
-    return [d.name,s(d.phone),s(d.notes),dInvs.length,
-            unpaidInvs.length, unpaidInvs.reduce((s,i)=>s+n(i.total),0),
-            paidInvs.length,   paidInvs.reduce((s,i)=>s+n(i.total),0)];
-  });
-  const wsDrv = XLSX.utils.aoa_to_sheet([drvMasterHeader, ...drvMasterRows]);
-  _styleSheet(wsDrv, drvMasterHeader.length);
-  XLSX.utils.book_append_sheet(wb, wsDrv, 'Driver Records');
-
-  // ── SHEET 8: Item Rates ──
-  const rateHeader=['ITEM','W/P RATE (AED)','D/C RATE (AED)','PRESS RATE (AED)'];
-  const rateRows=LAUNDRY_ITEMS.map(item=>{const r=rates[item]||{wp:0,dc:0,pr:0};return[item,n(r.wp),n(r.dc),n(r.pr)];});
-  const wsRates = XLSX.utils.aoa_to_sheet([rateHeader, ...rateRows]);
-  _styleSheet(wsRates, rateHeader.length);
-  XLSX.utils.book_append_sheet(wb, wsRates, 'Item Rates');
-
-  // ── SHEET 9: System Backup (JSON in one cell — for perfect re-import) ──
-  const backupData = {invoices:invs, drivers:drvs, rates:rates, exportDate:new Date().toISOString(), version:'v9'};
-  const wsBackup = XLSX.utils.aoa_to_sheet([
-    ['LAUNDRY COUNTER SALE — SYSTEM BACKUP'],
-    ['Export Date:', new Date().toLocaleString()],
-    ['Total Invoices:', invs.length],
-    ['Instructions:', 'To restore: use Settings > Import Excel Backup and select this file. The System Backup sheet contains all data.'],
-    [''],
-    ['BACKUP_JSON (do not edit this cell):', JSON.stringify(backupData)]
-  ]);
-  XLSX.utils.book_append_sheet(wb, wsBackup, 'System Backup');
-
-  // ── SHEETS 10+: Monthly Statement (colorful grid — one sheet per month) ──
-  const uniqueMonths = [...new Set(invs.map(i=>(i.date||'').slice(0,7)).filter(Boolean))].sort();
-  uniqueMonths.forEach(month=>{
-    const wsMonth = buildMonthlyStatementSheet(invs, month);
-    if(wsMonth){
-      const [y,mo]=month.split('-');
-      const mNames=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-      XLSX.utils.book_append_sheet(wb, wsMonth, `${mNames[parseInt(mo)-1]} ${y}`);
-    }
-  });
-
-  // ── Write file — cross-platform Blob method (works on iOS, Android, all desktop) ──
-  const dateStr = new Date().toISOString().slice(0,10);
-  const fileName = `Laundry_Backup_${dateStr}.xlsx`;
-  try {
-    // Try modern approach first: Blob + object URL (works on all platforms)
-    const wbOut = XLSX.write(wb, {bookType:'xlsx', type:'array'});
-    const blob = new Blob([wbOut], {type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = fileName;
-    a.style.display = 'none';
-    document.body.appendChild(a);
-    a.click();
-    setTimeout(()=>{ URL.revokeObjectURL(url); document.body.removeChild(a); }, 2000);
-  } catch(e) {
-    // Final fallback for very old browsers
-    try { XLSX.writeFile(wb, fileName); }
-    catch(e2) { alert('❌ Could not download file. Please try on a desktop browser.\n'+e2.message); }
-  }
-}
-
-// ── Helper: set column widths ──
-function _styleSheet(ws, colCount, opts){
-  opts = opts || {};
-  const widths = [15,12,22,16,20,12,14,8,12,14,8,12,14,10,12,18,30];
-  ws['!cols'] = widths.slice(0, colCount).map(w=>({wch:w}));
-
-  const range = XLSX.utils.decode_range(ws['!ref']||'A1');
-  const BLUE_HDR  = {fgColor:{rgb:'1A3A5C'}};
-  const GOLD_HDR  = {fgColor:{rgb:'B8860B'}};
-  const LIGHT_ROW = {fgColor:{rgb:'EEF1F6'}};
-  const GREEN_BG  = {fgColor:{rgb:'D1FAE5'}};
-  const RED_BG    = {fgColor:{rgb:'FEE2E2'}};
-  const TOTAL_BG  = {fgColor:{rgb:'1A3A5C'}};
-  const WHITE     = {rgb:'FFFFFF'};
-  const GOLD_C    = {rgb:'E8A020'};
-  const DARK      = {rgb:'1A2535'};
-
-  const cellStyle = (fill, font, bold, halign, border) => ({
-    fill:{patternType:'solid', fgColor:fill||{rgb:'FFFFFF'}},
-    font:{name:'Calibri', sz:10, bold:!!bold, color:font||{rgb:'1A2535'}},
-    alignment:{horizontal:halign||'left', vertical:'center', wrapText:false},
-    border: border ? {
-      top:{style:'thin',color:{rgb:'D0D8E4'}},
-      bottom:{style:'thin',color:{rgb:'D0D8E4'}},
-      left:{style:'thin',color:{rgb:'D0D8E4'}},
-      right:{style:'thin',color:{rgb:'D0D8E4'}}
-    } : {}
-  });
-
-  for(let R = range.s.r; R <= range.e.r; R++){
-    const isHeader = R === 0;
-    const isLast   = R === range.e.r;
-    const isEven   = R % 2 === 1;
-
-    for(let C = range.s.c; C <= range.e.c; C++){
-      const addr = XLSX.utils.encode_cell({r:R, c:C});
-      if(!ws[addr]) ws[addr] = {t:'z', v:''};
-
-      const cellVal = String(ws[addr].v||'').toUpperCase();
-      let fill, font, bold, halign;
-
-      if(isHeader){
-        fill  = opts.goldHeader ? GOLD_HDR : BLUE_HDR;
-        font  = WHITE;
-        bold  = true;
-        halign = 'center';
-      } else if(isLast && (cellVal.includes('TOTAL') || cellVal.includes('GRAND'))){
-        fill  = TOTAL_BG;
-        font  = GOLD_C;
-        bold  = true;
-        halign = C === 0 ? 'left' : 'right';
-      } else if(cellVal === 'UNPAID'){
-        fill  = RED_BG;
-        font  = {rgb:'991B1B'};
-        bold  = true;
-        halign = 'center';
-      } else if(cellVal === 'PAID'){
-        fill  = GREEN_BG;
-        font  = {rgb:'065F46'};
-        bold  = true;
-        halign = 'center';
-      } else {
-        fill  = isEven ? LIGHT_ROW : {rgb:'FFFFFF'};
-        font  = DARK;
-        bold  = false;
-        halign = (typeof ws[addr].v === 'number') ? 'right' : 'left';
-      }
-
-      ws[addr].s = cellStyle(fill, font, bold, halign, true);
-    }
-  }
-
-  // Freeze header row
-  ws['!freeze'] = {xSplit:0, ySplit:1};
-}
-
-// ── RICH MONTHLY STATEMENT SHEET (like image 2 — items × DO numbers grid) ──
-function buildMonthlyStatementSheet(invs, month){
-  // month = 'YYYY-MM' or null for all
-  const n  = v => parseFloat(v)||0;
-  const fd = d => { if(!d) return ''; try{ const [y,m,dd]=d.split('-'); return `${dd}/${m}/${y}`; }catch{return String(d||'');} };
-  const rates = STORE.get('rates')||{};
-  const ci = STORE.get('company_info')||{};
-
-  let filtered = invs;
-  if(month) filtered = invs.filter(i=>(i.date||'').startsWith(month));
-  if(!filtered.length) return null;
-
-  filtered = [...filtered].sort((a,b)=>(a.date||'').localeCompare(b.date||''));
-
-  // All unique items across these invoices
-  const itemSet = new Set();
-  filtered.forEach(inv=>Object.keys(inv.items||{}).forEach(k=>{
-    const v=inv.items[k];
-    if(n(v.wpQty)+n(v.dcQty)+n(v.prQty)+n(v.qty)>0) itemSet.add(k);
-  }));
-  const items = [...itemSet];
-
-  // Build header rows
-  const rows = [];
-  const merges = [];
-
-  // Company header row
-  const companyName = ci.name || 'LAUNDRY COUNTER SALE';
-  const companyInfo = [ci.address||'', ci.telfax||'', `TRN: ${ci.trn||''}`].filter(Boolean).join('  |  ');
-  rows.push([companyName]);
-  rows.push([companyInfo]);
-  rows.push([]);
-
-  // Client info (left side)
-  const customerNames = [...new Set(filtered.map(i=>i.customer).filter(Boolean))];
-  const customers = customerNames.join(', ');
-  rows.push([`CLIENT NAME:  ${customers}`]);
-  rows.push([]);
-
-  // Month title
-  const [y,mo] = (month||filtered[0].date.slice(0,7)).split('-');
-  const monthNames=['January','February','March','April','May','June','July','August','September','October','November','December'];
-  const monthLabel = monthNames[parseInt(mo)-1]+' '+y;
-  rows.push([`LAUNDRY SERVICE — SUMMARY FOR THE MONTH OF ${monthLabel}`]);
-  rows.push([]);
-
-  // Table header row 1: DATE | 1..N DO numbers | QTY | UNIT PRICE | AMOUNT
-  const doNums = filtered.map(i=>i.pickup||i.invNo||'');
-  const dateRow = ['DATE', ...doNums.map(()=>''), 'QTY.', 'UNIT PRICE', 'AMOUNT (AED)'];
-  // Actually we use a simpler grid: ITEM / BILL NO. → columns are DO numbers
-  const billHeader = ['ITEM / BILL NO. →', ...doNums, 'QTY.', 'UNIT PRICE', 'AMOUNT (AED)'];
-  const dateHeader = ['DATE', ...filtered.map(i=>fd(i.date)), '', '', ''];
-
-  const headerRowIdx = rows.length;
-  rows.push(dateHeader);
-  rows.push(billHeader);
-
-  // Data rows — one per item
-  items.forEach(item=>{
-    const r=rates[item]||{wp:0,dc:0,pr:0};
-    const unitPrice = n(r.wp)||n(r.dc)||n(r.pr)||0;
-    let totalQty = 0;
-    const qtyPerDO = filtered.map(inv=>{
-      const v=inv.items[item];
-      if(!v) return 0;
-      const q=n(v.wpQty)+n(v.dcQty)+n(v.prQty)+n(v.qty);
-      totalQty+=q;
-      return q||'';
+    dInvs.forEach((inv,ri)=>{
+      const bg=ri%2===0?{argb:'FFFFFFFF'}:C_LGRAY;
+      const row=wsDrv.addRow([drv,s(inv.pickup||''),fd(inv.date),s(inv.customer),n(inv.total),s(inv.status).toUpperCase(),fd(inv.paidDate)]);
+      row.height=17;
+      row.eachCell((cell,ci2)=>{
+        const val=String(cell.value||'');
+        if(val==='PAID') cell.style=dataStyle(C_GREEN,C_GTEXT,'center',true);
+        else if(val==='UNPAID') cell.style=dataStyle(C_RED,C_RTEXT,'center',true);
+        else cell.style=dataStyle(bg,ci2===1?C_GOLD:C_DARK,typeof cell.value==='number'?'right':'left',ci2===1);
+      });
     });
-    const amount = totalQty * unitPrice;
-    rows.push([item, ...qtyPerDO, totalQty||'', unitPrice||'', amount||'']);
+    const tot=dInvs.reduce((s,i)=>s+n(i.total),0);
+    const uTot=dInvs.filter(i=>i.status==='unpaid').reduce((s,i)=>s+n(i.total),0);
+    const tRow=wsDrv.addRow([`${drv} TOTAL: AED ${tot.toFixed(2)}  |  UNPAID: AED ${uTot.toFixed(2)}`]);
+    tRow.height=18; tRow.getCell(1).style=totalStyle(); tRow.getCell(1).style.alignment={horizontal:'left'};
+    wsDrv.addRow([]);
   });
 
-  // Subtotal row
-  const subtotal = filtered.reduce((s,i)=>s+n(i.subtotal),0);
-  const vatPct = n((filtered[0]||{}).vatPct||5);
-  const vat = filtered.reduce((s,i)=>s+n(i.vat),0);
-  const grandTotal = filtered.reduce((s,i)=>s+n(i.total),0);
-
-  rows.push([]);
-  const stRow = new Array(filtered.length+4).fill('');
-  stRow[0]='SUBTOTAL'; stRow[stRow.length-1]=subtotal.toFixed(2);
-  rows.push([...stRow]);
-
-  const vatRow = new Array(filtered.length+4).fill('');
-  vatRow[0]=`VAT @ ${vatPct}%`; vatRow[vatRow.length-1]=vat.toFixed(2);
-  rows.push([...vatRow]);
-
-  const gtRow = new Array(filtered.length+4).fill('');
-  gtRow[0]='GRAND TOTAL (AED)'; gtRow[gtRow.length-1]=grandTotal.toFixed(2);
-  rows.push([...gtRow]);
-
-  const ws = XLSX.utils.aoa_to_sheet(rows);
-
-  // Column widths
-  const cols = [20, ...filtered.map(()=>({wch:8})), {wch:8},{wch:12},{wch:14}];
-  ws['!cols'] = [{wch:22}, ...filtered.map(()=>({wch:8})), {wch:8},{wch:12},{wch:14}];
-
-  // Apply color styles
-  const range = XLSX.utils.decode_range(ws['!ref']||'A1');
-  const BLUE  = {rgb:'1A3A5C'};
-  const GOLD  = {rgb:'E8A020'};
-  const WHITE = {rgb:'FFFFFF'};
-  const LGRAY = {rgb:'EEF1F6'};
-  const DARK  = {rgb:'1A2535'};
-  const TOTBG = {rgb:'F5C060'};
-
-  const cs = (fgRgb, fontRgb, bold, halign) => ({
-    fill:{patternType:'solid', fgColor:{rgb:fgRgb}},
-    font:{name:'Calibri', sz:10, bold:!!bold, color:{rgb:fontRgb}},
-    alignment:{horizontal:halign||'left', vertical:'center'},
-    border:{top:{style:'thin',color:{rgb:'D0D8E4'}},bottom:{style:'thin',color:{rgb:'D0D8E4'}},left:{style:'thin',color:{rgb:'D0D8E4'}},right:{style:'thin',color:{rgb:'D0D8E4'}}}
+  // ═══════════════════════════════════════════
+  // SHEET 7: Customer Records
+  // ═══════════════════════════════════════════
+  const wsCust = wb.addWorksheet('Customer Records');
+  wsCust.columns=[24,16,26,13,16,12,14,14,16,14].map(w=>({width:w}));
+  wsCust.addRow(['CUSTOMER NAME','CONTACT','ADDRESS','TOTAL ORDERS','TOTAL BILLED (AED)','PAID COUNT','PAID AMT (AED)','UNPAID COUNT','UNPAID AMT (AED)','LAST ORDER']).eachCell(cell=>{ cell.style=hdrStyle(C_BLUE,C_WHITE); });
+  wsCust.getRow(1).height=20; wsCust.views=[{state:'frozen',ySplit:1}];
+  const custMap={};
+  invs.forEach(i=>{ const k=(i.customer||'').toUpperCase(); if(!k) return; if(!custMap[k]) custMap[k]={name:k,contact:i.contact||'',address:i.address||'',count:0,total:0,paid:0,paidAmt:0,unpaid:0,unpaidAmt:0,lastDate:''}; const c=custMap[k]; c.count++;c.total+=n(i.total); if(i.status==='paid'){c.paid++;c.paidAmt+=n(i.total);} if(i.status==='unpaid'){c.unpaid++;c.unpaidAmt+=n(i.total);} if((i.date||'')>c.lastDate) c.lastDate=i.date||''; });
+  Object.values(custMap).sort((a,b)=>a.name.localeCompare(b.name)).forEach((c,ri)=>{
+    const bg=ri%2===0?{argb:'FFFFFFFF'}:C_LGRAY;
+    const row=wsCust.addRow([c.name,c.contact,c.address,c.count,c.total,c.paid,c.paidAmt,c.unpaid,c.unpaidAmt,fd(c.lastDate)]);
+    row.height=17; row.eachCell((cell,ci2)=>{ cell.style=dataStyle(bg,C_DARK,typeof cell.value==='number'?'right':'left',false); });
   });
 
-  for(let R=range.s.r; R<=range.e.r; R++){
-    for(let C=range.s.c; C<=range.e.c; C++){
-      const addr = XLSX.utils.encode_cell({r:R, c:C});
-      if(!ws[addr]) ws[addr]={t:'z',v:''};
-      const val = String(ws[addr].v||'');
-      const isDateHeaderRow = R===headerRowIdx;
-      const isBillHeaderRow = R===headerRowIdx+1;
-      const isDataRow = R>headerRowIdx+1;
-      const isLastCols = C===range.e.c;
-      const isTotalRow = val.includes('SUBTOTAL')||val.includes('VAT @')||val.includes('GRAND TOTAL');
-      const isCompTitle = R===0;
-      const isMonthTitle = R===5;
+  // ═══════════════════════════════════════════
+  // SHEET 8: Driver Records
+  // ═══════════════════════════════════════════
+  const wsDrvM = wb.addWorksheet('Driver Records');
+  wsDrvM.columns=[20,16,24,14,14,16,13,15].map(w=>({width:w}));
+  wsDrvM.addRow(['DRIVER NAME','PHONE','NOTES','TOTAL INVOICES','UNPAID COUNT','UNPAID AMT (AED)','PAID COUNT','PAID AMT (AED)']).eachCell(cell=>{ cell.style=hdrStyle(C_BLUE,C_WHITE); });
+  wsDrvM.getRow(1).height=20; wsDrvM.views=[{state:'frozen',ySplit:1}];
+  drvs.forEach((d,ri)=>{
+    const dInvs=invs.filter(i=>i.driver===d.name);
+    const uInvs=dInvs.filter(i=>i.status==='unpaid');
+    const pInvs=dInvs.filter(i=>i.status==='paid');
+    const bg=ri%2===0?{argb:'FFFFFFFF'}:C_LGRAY;
+    const row=wsDrvM.addRow([d.name,s(d.phone),s(d.notes),dInvs.length,uInvs.length,uInvs.reduce((s,i)=>s+n(i.total),0),pInvs.length,pInvs.reduce((s,i)=>s+n(i.total),0)]);
+    row.height=17; row.eachCell((cell,ci2)=>{ cell.style=dataStyle(bg,C_DARK,typeof cell.value==='number'?'right':'left',false); });
+  });
 
-      if(isCompTitle){
-        ws[addr].s=cs('1A3A5C','FFFFFF',true,'center');
-      } else if(isMonthTitle){
-        ws[addr].s=cs('1A3A5C','E8A020',true,'center');
-      } else if(isDateHeaderRow){
-        ws[addr].s=cs(C===0?'1A3A5C':'2A5A8C','FFFFFF',true,'center');
-      } else if(isBillHeaderRow){
-        ws[addr].s=cs(C===0?'1A3A5C':'2A5A8C','FFFFFF',true,'center');
-      } else if(isTotalRow){
-        ws[addr].s=cs('1A3A5C','E8A020',true, C===0?'left':'right');
-      } else if(isDataRow){
-        const isEven=(R-headerRowIdx-2)%2===0;
-        if(isLastCols) ws[addr].s=cs('FFF9E6','B8860B',true,'right');
-        else ws[addr].s=cs(isEven?'EEF1F6':'FFFFFF','1A2535',false,C===0?'left':'center');
-      } else {
-        ws[addr].s=cs('FFFFFF','1A2535',false,'left');
-      }
-    }
-  }
+  // ═══════════════════════════════════════════
+  // SHEET 9: Item Rates
+  // ═══════════════════════════════════════════
+  const wsRates = wb.addWorksheet('Item Rates');
+  wsRates.columns=[28,18,18,18].map(w=>({width:w}));
+  wsRates.addRow(['ITEM','W/P RATE (AED)','D/C RATE (AED)','PRESS RATE (AED)']).eachCell(cell=>{ cell.style=hdrStyle(C_BLUE,C_WHITE); });
+  wsRates.getRow(1).height=20; wsRates.views=[{state:'frozen',ySplit:1}];
+  (typeof LAUNDRY_ITEMS!=='undefined'?LAUNDRY_ITEMS:[]).forEach((item,ri)=>{
+    const r=rates[item]||{wp:0,dc:0,pr:0};
+    const bg=ri%2===0?{argb:'FFFFFFFF'}:C_LGRAY;
+    const row=wsRates.addRow([item,n(r.wp),n(r.dc),n(r.pr)]);
+    row.height=17; row.eachCell((cell,ci2)=>{ cell.style=dataStyle(bg,C_DARK,ci2>1?'right':'left',false); });
+  });
 
-  // Freeze after header rows
-  ws['!freeze']={xSplit:1, ySplit:headerRowIdx+2};
+  // ═══════════════════════════════════════════
+  // SHEET 10+: Monthly Statement (colorful grid — image 2 style)
+  // ═══════════════════════════════════════════
+  const uniqueMonths=[...new Set(invs.map(i=>(i.date||'').slice(0,7)).filter(Boolean))].sort();
+  uniqueMonths.forEach(month=>{
+    const [y,mo]=month.split('-');
+    const sheetName=`${mNames2[parseInt(mo)-1]} ${y}`;
+    const filtered=invs.filter(i=>(i.date||'').startsWith(month)).sort((a,b)=>(a.date||'').localeCompare(b.date||''));
+    if(!filtered.length) return;
 
-  return ws;
+    const ws=wb.addWorksheet(sheetName);
+    const monthNames2=['January','February','March','April','May','June','July','August','September','October','November','December'];
+    const monthLabel=`${monthNames2[parseInt(mo)-1]} ${y}`;
+
+    // All unique items
+    const itemSet=new Set();
+    filtered.forEach(inv=>Object.keys(inv.items||{}).forEach(k=>{ const v=inv.items[k]; if(n(v.wpQty)+n(v.dcQty)+n(v.prQty)+n(v.qty)>0) itemSet.add(k); }));
+    const items=[...itemSet];
+    const doNums=filtered.map(i=>i.pickup||i.invNo||'');
+    const dates=filtered.map(i=>fd(i.date));
+    const totalCols=doNums.length;
+
+    // Column widths: item col + N do cols + qty + unit price + amount
+    ws.columns=[{width:24},...doNums.map(()=>({width:7})),{width:8},{width:11},{width:13}];
+
+    // Row 1: Company header
+    ws.addRow([ciName]);
+    ws.getRow(1).getCell(1).style={fill:{type:'pattern',pattern:'solid',fgColor:C_BLUE},font:{name:'Calibri',size:14,bold:true,color:C_WHITE},alignment:{horizontal:'center'}};
+    ws.mergeCells(1,1,1,totalCols+4);
+
+    // Row 2: Company info
+    ws.addRow([[ciAddr,ciTel,ciEmail,`TRN: ${ciTrn}`].filter(Boolean).join('  |  ')]);
+    ws.getRow(2).getCell(1).style={fill:{type:'pattern',pattern:'solid',fgColor:{argb:'FF2A5A8C'}},font:{name:'Calibri',size:9,color:C_WHITE},alignment:{horizontal:'center'}};
+    ws.mergeCells(2,1,2,totalCols+4);
+
+    ws.addRow([]); // spacer
+
+    // Row 4: Month title
+    ws.addRow([`LAUNDRY SERVICE — SUMMARY FOR THE MONTH OF ${monthLabel.toUpperCase()}`]);
+    ws.getRow(4).getCell(1).style={fill:{type:'pattern',pattern:'solid',fgColor:C_BLUE},font:{name:'Calibri',size:12,bold:true,color:C_GOLD},alignment:{horizontal:'center'}};
+    ws.mergeCells(4,1,4,totalCols+4);
+    ws.getRow(4).height=22;
+
+    ws.addRow([]); // spacer
+
+    // Row 6: DATE header row
+    const dateRow=['DATE',...dates,'','',''];
+    ws.addRow(dateRow);
+    const dRow=ws.getRow(6);
+    dRow.height=18;
+    dRow.getCell(1).style=hdrStyle(C_BLUE,C_WHITE);
+    dates.forEach((_,i)=>{ dRow.getCell(i+2).style=hdrStyle({argb:'FF2A5A8C'},C_WHITE); dRow.getCell(i+2).value=dates[i]; });
+    dRow.getCell(totalCols+2).style=hdrStyle(C_BLUE,C_WHITE); dRow.getCell(totalCols+2).value='QTY.';
+    dRow.getCell(totalCols+3).style=hdrStyle(C_BLUE,C_WHITE); dRow.getCell(totalCols+3).value='UNIT PRICE';
+    dRow.getCell(totalCols+4).style=hdrStyle(C_BLUE,C_WHITE); dRow.getCell(totalCols+4).value='AMOUNT (AED)';
+
+    // Row 7: BILL NO header row
+    const billRow=['ITEM / BILL NO. →',...doNums,'','',''];
+    ws.addRow(billRow);
+    const bRow=ws.getRow(7);
+    bRow.height=18;
+    bRow.getCell(1).style=hdrStyle(C_BLUE,C_WHITE);
+    doNums.forEach((_,i)=>{ bRow.getCell(i+2).style=hdrStyle({argb:'FF2A5A8C'},C_WHITE); bRow.getCell(i+2).value=doNums[i]; });
+
+    // Data rows
+    items.forEach((item,ri)=>{
+      const unitPrice=n((rates[item]||{}).wp)||n((rates[item]||{}).dc)||n((rates[item]||{}).pr)||0;
+      let totalQty=0;
+      const qtyPerDO=filtered.map(inv=>{ const v=inv.items[item]; if(!v) return null; const q=n(v.wpQty)+n(v.dcQty)+n(v.prQty)+n(v.qty); totalQty+=q; return q||null; });
+      const amount=totalQty*unitPrice;
+      const rowData=[item,...qtyPerDO,totalQty||null,unitPrice||null,amount||null];
+      const row=ws.addRow(rowData);
+      const bg=ri%2===0?{argb:'FFFFFFFF'}:C_LGRAY;
+      row.height=17;
+      row.getCell(1).style=dataStyle(bg,C_DARK,'left',false);
+      qtyPerDO.forEach((_,i)=>{
+        const cell=row.getCell(i+2);
+        cell.style=dataStyle(bg,C_DARK,'center',false);
+        if(!cell.value) cell.value=null;
+      });
+      row.getCell(totalCols+2).style=dataStyle({argb:'FFDBEAFE'},{argb:'FF1E40AF'},'center',true);
+      row.getCell(totalCols+3).style=dataStyle(C_GOLD2,{argb:'FF92400E'},'right',false);
+      row.getCell(totalCols+4).style=dataStyle(C_GOLD2,{argb:'FF92400E'},'right',true);
+    });
+
+    // Spacer
+    ws.addRow([]);
+
+    // Subtotal / VAT / Grand Total rows
+    const subtotal=filtered.reduce((s,i)=>s+n(i.subtotal),0);
+    const vatPct=n((filtered[0]||{}).vatPct||5);
+    const vat=filtered.reduce((s,i)=>s+n(i.vat),0);
+    const grandTotal=filtered.reduce((s,i)=>s+n(i.total),0);
+
+    [[`SUBTOTAL`,subtotal],[`VAT @ ${vatPct}%`,vat],['GRAND TOTAL (AED)',grandTotal]].forEach(([label,val],ti)=>{
+      const tRowData=new Array(totalCols+4).fill(null);
+      tRowData[0]=label; tRowData[totalCols+3]=val;
+      const tRow=ws.addRow(tRowData);
+      tRow.height=ti===2?22:18;
+      const bgT=ti===2?C_BLUE:{argb:'FF1E3A5C'};
+      const fontT=ti===2?C_GOLD:C_WHITE;
+      tRow.getCell(1).style={fill:{type:'pattern',pattern:'solid',fgColor:bgT},font:{name:'Calibri',size:ti===2?12:10,bold:true,color:fontT},alignment:{horizontal:'left'},border};
+      tRow.getCell(totalCols+4).style={fill:{type:'pattern',pattern:'solid',fgColor:bgT},font:{name:'Calibri',size:ti===2?12:10,bold:true,color:fontT},alignment:{horizontal:'right'},border};
+    });
+  });
+
+  // ═══════════════════════════════════════════
+  // SYSTEM BACKUP SHEET (JSON for re-import)
+  // ═══════════════════════════════════════════
+  const wsBackup=wb.addWorksheet('System Backup');
+  wsBackup.columns=[{width:30},{width:80}];
+  const backupData={invoices:invs,drivers:drvs,rates:rates,exportDate:new Date().toISOString(),version:'v9'};
+  [['LAUNDRY COUNTER SALE — SYSTEM BACKUP',''],['Export Date:',new Date().toLocaleString()],['Total Invoices:',invs.length],['Instructions:','To restore: use Settings > Import Excel Backup and select this file.'],[''],['BACKUP_JSON (do not edit this cell):',JSON.stringify(backupData)]].forEach((r,ri)=>{
+    const row=wsBackup.addRow(r);
+    if(ri===0) row.getCell(1).style=hdrStyle(C_BLUE,C_WHITE);
+    if(ri===5) row.getCell(1).style={font:{bold:true,color:C_DARK}};
+  });
+
+  // ── Write file ──
+  const dateStr=new Date().toISOString().slice(0,10);
+  const fileName=`Laundry_Backup_${dateStr}.xlsx`;
+  wb.xlsx.writeBuffer().then(buffer=>{
+    const blob=new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'});
+    const url=URL.createObjectURL(blob);
+    const a=document.createElement('a');
+    a.href=url; a.download=fileName; a.style.display='none';
+    document.body.appendChild(a); a.click();
+    setTimeout(()=>{ URL.revokeObjectURL(url); document.body.removeChild(a); },2000);
+  }).catch(e=>{ alert('❌ Could not generate Excel file: '+e.message); });
 }
 
 // ── JSON BACKUP EXPORT (secondary safety) ──
